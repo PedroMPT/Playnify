@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "858806012555",
+    "firebase_url": "https://sis-project-15912.firebaseio.com",
+    "project_id": "sis-project-15912",
+    "storage_bucket": "sis-project-15912.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:858806012555:android:24b0ac0bfd566e0f",
+        "android_client_info": {
+          "package_name": "pt.ismai.pedro.sisproject"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "858806012555-49isp8kpk8a5vq9kmoj2mkblgfuo0ico.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "pt.ismai.pedro.sisproject",
+            "certificate_hash": "131491c1b0610e7ade1ef43e98a522429dd39f7c"
+          }
+        },
+        {
+          "client_id": "858806012555-tevmbiefjno64n5rfbe04of87qjcd1g1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCP7jzbr9DSiVnyjLVBqoMenY_FwFvy1xc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "858806012555-tevmbiefjno64n5rfbe04of87qjcd1g1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
