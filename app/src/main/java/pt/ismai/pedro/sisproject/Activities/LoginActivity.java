@@ -1,5 +1,6 @@
 package pt.ismai.pedro.sisproject.Activities;
 
+import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.Intent;
 import android.support.annotation.NonNull;
@@ -12,6 +13,8 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
@@ -19,6 +22,8 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
 import pt.ismai.pedro.sisproject.R;
+
+import static pt.ismai.pedro.sisproject.Activities.Constants.Constants.ERROR_DIALOG_REQUEST;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -47,10 +52,12 @@ public class LoginActivity extends AppCompatActivity {
                 String email = input_email.getText().toString();
                 String password = input_password.getText().toString();
 
-                if(!email.equals("") && !password.equals("")){
-                    signIn(email,password);
-                }else{
-                    toastMessage("Please fill all the fields");
+                if(isServicesOK()){
+                    if(!email.equals("") && !password.equals("")){
+                        signIn(email,password);
+                    }else{
+                        toastMessage("Please fill all the fields");
+                    }
                 }
             }
         });
@@ -127,5 +134,26 @@ public class LoginActivity extends AppCompatActivity {
             //user is already connected so we need to redirect him to MainActivity
             executeActivity(MainActivity.class);
         }
+    }
+
+    public boolean isServicesOK(){
+        Log.d(TAG, "isServicesOK: checking google services version");
+
+        int available = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(LoginActivity.this);
+
+        if(available == ConnectionResult.SUCCESS){
+            //everything is fine and the user can make map requests
+            Log.d(TAG, "isServicesOK: Google Play Services is working");
+            return true;
+        }
+        else if(GoogleApiAvailability.getInstance().isUserResolvableError(available)){
+            //an error occured but we can resolve it
+            Log.d(TAG, "isServicesOK: an error occured but we can fix it");
+            Dialog dialog = GoogleApiAvailability.getInstance().getErrorDialog(LoginActivity.this, available, ERROR_DIALOG_REQUEST);
+            dialog.show();
+        }else{
+            Toast.makeText(this, "You can't make map requests", Toast.LENGTH_SHORT).show();
+        }
+        return false;
     }
 }
