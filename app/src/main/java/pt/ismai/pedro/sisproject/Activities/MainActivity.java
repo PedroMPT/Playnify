@@ -11,16 +11,11 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
-import android.view.inputmethod.EditorInfo;
-import android.widget.AutoCompleteTextView;
-import android.widget.EditText;
-import android.widget.ListAdapter;
-import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -31,9 +26,15 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
+import com.google.android.libraries.places.api.Places;
+import com.google.android.libraries.places.api.model.Place;
+import com.google.android.libraries.places.api.net.PlacesClient;
+import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
+import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import pt.ismai.pedro.sisproject.R;
@@ -47,8 +48,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private static final String COARSE_LOCATION = Manifest.permission.ACCESS_COARSE_LOCATION;
     private static final float DEFAULT_ZOOM = 15f;
     private GoogleMap myMap;
+    PlacesClient placesClient;
+    List<Place.Field> placeFields = Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.ADDRESS);
+    AutocompleteSupportFragment placesFragment;
     private FusedLocationProviderClient fusedLocationProviderClient;
-    EditText input_search;
     FloatingActionButton locationButton;
 
     @Override
@@ -67,14 +70,54 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             myMap.setMyLocationEnabled(true);
             myMap.getUiSettings().setMyLocationButtonEnabled(false);
             init();
+
+            initPlaces();
+            setupPlaceAutoComplete();
         }
+    }
+
+    private void setupPlaceAutoComplete() {
+
+        placesFragment = (AutocompleteSupportFragment) getSupportFragmentManager().findFragmentById(R.id.places_autocomplete_fragment);
+        placesFragment.setPlaceFields(placeFields);
+        placesFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
+            @Override
+            public void onPlaceSelected(@NonNull Place place) {
+                Geocoder geocoder = new Geocoder(MainActivity.this);
+                List<Address> addressList = new ArrayList<>();
+
+                try {
+                    addressList = geocoder.getFromLocationName(place.getName(),1);
+                } catch (IOException e) {
+                    toastMessage( e.getMessage());
+                }
+
+                if (addressList.size() > 0){
+                    Address address = addressList.get(0);
+                    moveCamera( new LatLng(address.getLatitude(),address.getLongitude()),DEFAULT_ZOOM,address.getAddressLine(0));
+                }
+            }
+
+            @Override
+            public void onError(@NonNull Status status) {
+                toastMessage(status.getStatusMessage());
+            }
+        });
+    }
+
+    private void initPlaces() {
+
+        if (!Places.isInitialized()) {
+            Places.initialize(getApplicationContext(), getString(R.string.google_maps_api_key));
+        }
+        placesClient = Places.createClient(this);
+
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        input_search = findViewById(R.id.inputSearch);
         locationButton = findViewById(R.id.ic_gps);
 
         getLocationPermission();
@@ -82,20 +125,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private void init(){
 
-        input_search.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-            @Override
-            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                if (actionId == EditorInfo.IME_ACTION_SEARCH
-                        || actionId == EditorInfo.IME_ACTION_DONE
-                        || event.getAction() == KeyEvent.ACTION_DOWN
-                        || event.getAction() == KeyEvent.KEYCODE_ENTER){
-
-                    geoLocate();
-                }
-
-                return false;
-            }
-        });
+        setupPlaceAutoComplete();
 
         locationButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -105,24 +135,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         });
         hideSoftKeyboard();
-    }
-
-    private void geoLocate() {
-
-        String searchString = input_search.getText().toString();
-        Geocoder geocoder = new Geocoder(MainActivity.this);
-        List<Address> addressList = new ArrayList<>();
-
-        try {
-            geocoder.getFromLocationName(searchString,1);
-        } catch (IOException e) {
-            toastMessage( e.getMessage());
-        }
-
-        if (addressList.size() > 0){
-            Address address = addressList.get(0);
-            moveCamera( new LatLng(address.getLatitude(),address.getLongitude()),DEFAULT_ZOOM,address.getAddressLine(0));
-        }
     }
 
     private void getDevicelocation(){
