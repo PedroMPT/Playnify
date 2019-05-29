@@ -14,4 +14,8 @@
     <color name="base">#AAAAAA</color>
     <color name="iron">#CCCCCC</color>
     <color name="white">#FFFFFF</color>
+
+    <color name="profile_start_color">#a5d6a7</color>
+    <color name="profile_end_color">#66bb6a</color>
+    <color name="graylight">#fafafa</color>
 </resources>

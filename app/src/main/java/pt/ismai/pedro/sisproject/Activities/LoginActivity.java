@@ -29,7 +29,6 @@ public class LoginActivity extends AppCompatActivity {
 
     private static final String TAG = "LoginActivity";
     private FirebaseAuth mAuth;
-    private FirebaseAuth.AuthStateListener mAuthListener;
     EditText input_email, input_password;
     AppCompatButton btn_login;
     TextView link_signup, forgot_password;
@@ -117,7 +116,6 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void executeActivity(Class<?> subActivity){
-
         FirebaseUser user = mAuth.getCurrentUser();
         Intent intent = new Intent(this,subActivity);
         intent.putExtra("userId", user.getUid());

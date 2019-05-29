@@ -1,6 +1,7 @@
 package pt.ismai.pedro.sisproject.Activities;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Geocoder;
@@ -15,6 +16,7 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Toast;
 
+import com.bumptech.glide.Glide;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
@@ -31,12 +33,15 @@ import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.api.net.PlacesClient;
 import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import de.hdodenhof.circleimageview.CircleImageView;
 import pt.ismai.pedro.sisproject.R;
 
 import static pt.ismai.pedro.sisproject.Activities.Constants.Constants.PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION;
@@ -53,6 +58,39 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     AutocompleteSupportFragment placesFragment;
     private FusedLocationProviderClient fusedLocationProviderClient;
     FloatingActionButton locationButton;
+    CircleImageView profile_photo;
+    private FirebaseAuth mAuth;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        locationButton = findViewById(R.id.ic_gps);
+        profile_photo = findViewById(R.id.profilePhoto);
+        mAuth = FirebaseAuth.getInstance();
+
+        getLocationPermission();
+        loadUserInfo();
+
+        profile_photo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                executeActivity(ProfileActivity.class);
+            }
+        });
+    }
+
+    private void loadUserInfo() {
+        FirebaseUser user = mAuth.getCurrentUser();
+
+        if (user != null){
+            if (user.getPhotoUrl() != null){
+                Glide.with(this ).load(user.getPhotoUrl().toString()).into(profile_photo);
+            }
+        }
+    }
+
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
@@ -113,16 +151,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         placesClient = Places.createClient(this);
 
     }
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        locationButton = findViewById(R.id.ic_gps);
-
-        getLocationPermission();
-    }
-
     private void init(){
 
         setupPlaceAutoComplete();
@@ -234,6 +262,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private void hideSoftKeyboard(){
 
         this.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+    }
+
+    private void executeActivity(Class<?> subActivity){
+        FirebaseUser user = mAuth.getCurrentUser();
+        Intent intent = new Intent(this,subActivity);
+        intent.putExtra("userId", user.getUid());
+        startActivity(intent);
+
     }
 
 }
