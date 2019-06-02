@@ -129,7 +129,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             myMap.setMyLocationEnabled(true);
             myMap.getUiSettings().setMyLocationButtonEnabled(false);
             init();
-
             initPlaces();
             setupPlaceAutoComplete();
             addMapMarkers();
@@ -260,7 +259,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private void getGamesLocation(){
 
-        final CollectionReference gameLocationRef = mDB
+        CollectionReference gameLocationRef = mDB
                 .collection(getString(R.string.collection_games));
         gameLocationRef.get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
             @Override
