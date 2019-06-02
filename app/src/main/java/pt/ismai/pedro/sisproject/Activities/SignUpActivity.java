@@ -17,6 +17,7 @@ import android.os.Bundle;
 import android.support.v7.widget.AppCompatButton;
 import android.util.Log;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.Toast;
 
@@ -27,18 +28,23 @@ import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.UserProfileChangeRequest;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreSettings;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 import pt.ismai.pedro.sisproject.Activities.MainActivity;
+import pt.ismai.pedro.sisproject.Models.User;
 import pt.ismai.pedro.sisproject.R;
 
 public class SignUpActivity extends AppCompatActivity {
 
     private static final String TAG = "SignUpActivity";
     private FirebaseAuth mAuth;
+    private FirebaseFirestore mDB;
     private FirebaseAuth.AuthStateListener mAuthListener;
     static int PReqCode = 1;
     static int REQUESTCODE = 1;
@@ -54,6 +60,7 @@ public class SignUpActivity extends AppCompatActivity {
         setContentView(R.layout.activity_sign_up);
 
         mAuth = FirebaseAuth.getInstance();
+        mDB = FirebaseFirestore.getInstance();
         input_name = findViewById(R.id.input_name);
         input_email = findViewById(R.id.input_email);
         input_password = findViewById(R.id.input_password);
@@ -98,9 +105,11 @@ public class SignUpActivity extends AppCompatActivity {
                 }
             }
         });
+
+        hideSoftKeyboard();
     }
 
-    private void CreateUserAccount(String email, final String name, String pass) {
+    private void CreateUserAccount(final String email, final String name, String pass) {
 
         // this method creates user account with specific email and password
 
@@ -109,10 +118,31 @@ public class SignUpActivity extends AppCompatActivity {
             public void onComplete(@NonNull Task<AuthResult> task) {
 
                 if(task.isSuccessful()){
-                    // user account successfully
-                    toastMessage("Account created");
-                    // after we created user account we need to update his profile picture and name
-                    updateUserInfo(name, pickedImage, mAuth.getCurrentUser());
+
+                    User user = new User();
+                    user.setUsername(name);
+                    user.setEmail(email);
+                    user.setUser_id(mAuth.getUid());
+
+                    FirebaseFirestoreSettings settings = new FirebaseFirestoreSettings.Builder()
+                            .build();
+                    mDB.setFirestoreSettings(settings);
+
+                    DocumentReference newUserRef = mDB
+                            .collection(getString(R.string.collection_users))
+                            .document(mAuth.getUid());
+
+                    newUserRef.set(user).addOnCompleteListener(new OnCompleteListener<Void>() {
+                        @Override
+                        public void onComplete(@NonNull Task<Void> task) {
+                            if(task.isSuccessful()){
+                                updateUserInfo(name, pickedImage, mAuth.getCurrentUser());
+                            }else{
+                                toastMessage("Account failed to create!" + task.getException().getMessage());
+                            }
+                        }
+                    });
+
                 }
                 else{
 
@@ -151,9 +181,10 @@ public class SignUpActivity extends AppCompatActivity {
                                 if(task.isSuccessful()){
 
                                     // user info updated successfully
-                                    toastMessage("Register Completed");
+                                    toastMessage("Account created");
+                                    executeActivity(MainActivity.class);
                                 }
-                                executeActivity(MainActivity.class);
+
                             }
                         });
                     }
@@ -214,5 +245,9 @@ public class SignUpActivity extends AppCompatActivity {
         intent.putExtra("objectId", user.getUid());
         startActivity(intent);
         finish();
+    }
+
+    private void hideSoftKeyboard(){
+        this.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
     }
 }

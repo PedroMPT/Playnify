@@ -20,15 +20,22 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreSettings;
 
+import pt.ismai.pedro.sisproject.Models.User;
+import pt.ismai.pedro.sisproject.Models.UserSingleton;
 import pt.ismai.pedro.sisproject.R;
 
-import static pt.ismai.pedro.sisproject.Activities.Constants.Constants.ERROR_DIALOG_REQUEST;
+import static pt.ismai.pedro.sisproject.Constants.Constants.ERROR_DIALOG_REQUEST;
 
 public class LoginActivity extends AppCompatActivity {
 
     private static final String TAG = "LoginActivity";
     private FirebaseAuth mAuth;
+    private FirebaseAuth.AuthStateListener mAuthListener;
     EditText input_email, input_password;
     AppCompatButton btn_login;
     TextView link_signup, forgot_password;
@@ -44,6 +51,8 @@ public class LoginActivity extends AppCompatActivity {
         btn_login = findViewById(R.id.btn_login);
         link_signup = findViewById(R.id.link_signup);
         forgot_password = findViewById(R.id.link_forgot_password);
+
+        fireBaseSetup();
 
         btn_login.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -77,6 +86,37 @@ public class LoginActivity extends AppCompatActivity {
                 startActivity(intent);
             }
         });
+    }
+
+    private void fireBaseSetup(){
+
+        mAuthListener = new FirebaseAuth.AuthStateListener() {
+            @Override
+            public void onAuthStateChanged(@NonNull FirebaseAuth firebaseAuth) {
+
+                FirebaseUser user = mAuth.getCurrentUser();
+                if(user != null){
+
+                    FirebaseFirestore db = FirebaseFirestore.getInstance();
+                    FirebaseFirestoreSettings settings = new FirebaseFirestoreSettings.Builder().build();
+                    db.setFirestoreSettings(settings);
+
+                    DocumentReference userRef = db.collection(getString(R.string.collection_users)).document(mAuth.getUid());
+
+                    userRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+                        @Override
+                        public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+
+                            if (task.isSuccessful()){
+                                User user = task.getResult().toObject(User.class);
+                                ((UserSingleton)(getApplicationContext())).setUser(user);
+                            }
+                        }
+                    });
+                }
+            }
+        };
+
     }
 
     private void signIn(String email, String password) {

@@ -1,4 +1,4 @@
-package pt.ismai.pedro.sisproject.Activities.Constants;
+package pt.ismai.pedro.sisproject.Constants;
 
 public class Constants {
 

@@ -21,7 +21,7 @@ public class ProfileActivity extends AppCompatActivity {
     Button btn_sign_out;
     CircleImageView profile_photo;
     TextView username;
-    LinearLayout profile_edit;
+    LinearLayout profile_edit, game;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -33,12 +33,20 @@ public class ProfileActivity extends AppCompatActivity {
         profile_photo = findViewById(R.id.profilePhoto);
         username = findViewById(R.id.username);
         profile_edit = findViewById(R.id.profile_edit);
+        game = findViewById(R.id.game);
 
         profile_edit.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
                 executeActivity(EditProfileActivity.class);
+            }
+        });
+
+        game.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                executeActivity(ScheduleGameActivity.class);
             }
         });
 

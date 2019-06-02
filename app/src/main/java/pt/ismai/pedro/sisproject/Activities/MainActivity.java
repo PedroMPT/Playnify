@@ -35,6 +35,14 @@ import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.CollectionReference;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.GeoPoint;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.QuerySnapshot;
+import com.google.maps.android.clustering.ClusterManager;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -42,16 +50,20 @@ import java.util.Arrays;
 import java.util.List;
 
 import de.hdodenhof.circleimageview.CircleImageView;
+import pt.ismai.pedro.sisproject.Models.ClusterMarker;
+import pt.ismai.pedro.sisproject.Models.Football;
+import pt.ismai.pedro.sisproject.Models.Game;
 import pt.ismai.pedro.sisproject.R;
+import pt.ismai.pedro.sisproject.util.MyClusterManagerRenderer;
 
-import static pt.ismai.pedro.sisproject.Activities.Constants.Constants.PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION;
+import static pt.ismai.pedro.sisproject.Constants.Constants.PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback {
 
     private boolean mLocationPermissionGranted = false;
     private static final String FINE_LOCATION = Manifest.permission.ACCESS_FINE_LOCATION;
     private static final String COARSE_LOCATION = Manifest.permission.ACCESS_COARSE_LOCATION;
-    private static final float DEFAULT_ZOOM = 15f;
+    private static final float DEFAULT_ZOOM = 14.5f;
     private GoogleMap myMap;
     PlacesClient placesClient;
     List<Place.Field> placeFields = Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.ADDRESS);
@@ -60,6 +72,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     FloatingActionButton locationButton;
     CircleImageView profile_photo;
     private FirebaseAuth mAuth;
+    private FirebaseFirestore mDB;
+    private ArrayList<Football> games = new ArrayList<>();
+    private ClusterManager mClusterManager;
+    private MyClusterManagerRenderer mClusterManagerRenderer;
+    private ArrayList<ClusterMarker> mClusterMarkers = new ArrayList<>();
+    String userID;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,9 +86,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         locationButton = findViewById(R.id.ic_gps);
         profile_photo = findViewById(R.id.profilePhoto);
         mAuth = FirebaseAuth.getInstance();
+        mDB = FirebaseFirestore.getInstance();
+        userID = mAuth.getCurrentUser().getUid();
 
         getLocationPermission();
         loadUserInfo();
+        getGamesLocation();
 
         profile_photo.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -111,6 +132,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             initPlaces();
             setupPlaceAutoComplete();
+            addMapMarkers();
         }
     }
 
@@ -233,6 +255,75 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             ActivityCompat.requestPermissions(this,
                     permissions,
                     PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
+        }
+    }
+
+    private void getGamesLocation(){
+
+        final CollectionReference gameLocationRef = mDB
+                .collection(getString(R.string.collection_games));
+        gameLocationRef.get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+            @Override
+            public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                if (task.isSuccessful()){
+
+                    for(DocumentSnapshot document:task.getResult()){
+                        Football football = document.toObject(Football.class);
+                        games.add(football);
+                    }
+                }
+            }
+        });
+
+    }
+
+    private void addMapMarkers(){
+
+        if(myMap != null){
+            if (mClusterManager == null){
+                mClusterManager = new ClusterManager<ClusterMarker>(getApplicationContext(),myMap);
+            }
+            if (mClusterManagerRenderer == null){
+                mClusterManagerRenderer = new MyClusterManagerRenderer(
+                        getApplicationContext(),
+                        myMap,
+                        mClusterManager
+                );
+                mClusterManager.setRenderer(mClusterManagerRenderer);
+            }
+
+            for (Game game : games){
+
+                try{
+                    String snippet = "";
+                    if (game.getCaptain().getUser_id().equals(userID)){
+
+                        snippet = "This is you";
+                    }
+                    else{
+                        snippet = "Determine route to " + game.getCaptain().getUsername() + "?";
+                    }
+
+                    int avatar = R.drawable.football_mini;
+                    try{
+                        avatar = Integer.parseInt(game.getCaptain().getAvatar());
+                    }catch (NumberFormatException e){
+                        toastMessage("O Avatar não deu");
+                    }
+                    ClusterMarker myNewClusterMarker = new ClusterMarker(
+                            new LatLng(game.getGeoPoint().getLatitude(),game.getGeoPoint().getLongitude()),
+                            game.getCaptain().getUsername(),
+                            snippet,
+                            avatar
+                    );
+                    mClusterManager.addItem(myNewClusterMarker);
+                    mClusterMarkers.add(myNewClusterMarker);
+
+                }catch (NullPointerException e){
+                    toastMessage("Tudo falhou");
+                }
+            }
+            mClusterManager.cluster();
         }
     }
 
