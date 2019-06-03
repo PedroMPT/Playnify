@@ -8,6 +8,7 @@ import android.location.Geocoder;
 import android.location.Location;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -33,14 +34,13 @@ import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.api.net.PlacesClient;
 import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
+import com.google.common.collect.Maps;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.CollectionReference;
-import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.GeoPoint;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
+
 import com.google.firebase.firestore.QuerySnapshot;
 import com.google.maps.android.clustering.ClusterManager;
 
@@ -88,10 +88,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mAuth = FirebaseAuth.getInstance();
         mDB = FirebaseFirestore.getInstance();
         userID = mAuth.getCurrentUser().getUid();
-
         getLocationPermission();
         loadUserInfo();
         getGamesLocation();
+        //addMapMarkers();
+
 
         profile_photo.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -100,6 +101,15 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 executeActivity(ProfileActivity.class);
             }
         });
+
+        locationButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                getDevicelocation();
+            }
+        });
+
     }
 
     private void loadUserInfo() {
@@ -115,8 +125,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
-        myMap = googleMap;
-
         if (mLocationPermissionGranted) {
             getDevicelocation();
 
@@ -126,12 +134,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 return;
             }
+            myMap = googleMap;
             myMap.setMyLocationEnabled(true);
             myMap.getUiSettings().setMyLocationButtonEnabled(false);
-            init();
+            //getGamesLocation();
+            //addMapMarkers();
             initPlaces();
             setupPlaceAutoComplete();
-            addMapMarkers();
         }
     }
 
@@ -172,19 +181,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         placesClient = Places.createClient(this);
 
     }
-    private void init(){
-
-        setupPlaceAutoComplete();
-
-        locationButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-
-                getDevicelocation();
-            }
-        });
-        hideSoftKeyboard();
-    }
 
     private void getDevicelocation(){
 
@@ -199,22 +195,23 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                             Location currentLocation = (Location) task.getResult();
                             moveCamera(new LatLng(currentLocation.getLatitude(),
                                     currentLocation.getLongitude()),DEFAULT_ZOOM,"My Location");
+                            addMapMarkers();
                         }else{
                             toastMessage("Unable to get current location");
                         }
                     }
                 });
+
             }
 
         }catch (SecurityException e){
             toastMessage(e.getMessage());
         }
-
     }
 
     private void moveCamera(LatLng latLng, float zoom, String title){
 
-        myMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng,zoom));
+        myMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng,zoom));
         if (!title.equals("My Location")){
             MarkerOptions markerOptions = new MarkerOptions().position(latLng).title(title);
             myMap.addMarker(markerOptions);
@@ -243,6 +240,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     == PackageManager.PERMISSION_GRANTED){
                 mLocationPermissionGranted = true;
                 initMap();
+                addMapMarkers();
 
             }else{
                 ActivityCompat.requestPermissions(this,
@@ -273,7 +271,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 }
             }
         });
-
     }
 
     private void addMapMarkers(){
@@ -284,7 +281,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
             if (mClusterManagerRenderer == null){
                 mClusterManagerRenderer = new MyClusterManagerRenderer(
-                        getApplicationContext(),
+                        this,
                         myMap,
                         mClusterManager
                 );
@@ -307,7 +304,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     try{
                         avatar = Integer.parseInt(game.getCaptain().getAvatar());
                     }catch (NumberFormatException e){
-                        toastMessage("O Avatar não deu");
+                        //toastMessage("O Avatar não deu");
                     }
                     ClusterMarker myNewClusterMarker = new ClusterMarker(
                             new LatLng(game.getGeoPoint().getLatitude(),game.getGeoPoint().getLongitude()),
@@ -338,8 +335,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     mLocationPermissionGranted = true;
 
-                    //initialize our map
                     initMap();
+                    addMapMarkers();
                 }
             }
         }
@@ -360,6 +357,19 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         intent.putExtra("userId", user.getUid());
         startActivity(intent);
 
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        toastMessage("OnResume");
+        if(mLocationPermissionGranted){
+            getGamesLocation();
+            addMapMarkers();
+        }
+        else{
+            getLocationPermission();
+        }
     }
 
 }

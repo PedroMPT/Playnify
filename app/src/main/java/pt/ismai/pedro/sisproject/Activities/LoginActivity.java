@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.support.v7.widget.AppCompatButton;
 import android.util.Log;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -59,6 +60,8 @@ public class LoginActivity extends AppCompatActivity {
             public void onClick(View v) {
                 String email = input_email.getText().toString();
                 String password = input_password.getText().toString();
+
+                hideSoftKeyboard();
 
                 if(isServicesOK()){
                     if(!email.equals("") && !password.equals("")){
@@ -145,8 +148,8 @@ public class LoginActivity extends AppCompatActivity {
                                 btn_login.setEnabled(true);
                                 progressDialog.dismiss();
                             }
-                        }, 3000);
-                }
+                        }, 2000);
+            }
         });
     }
 
@@ -193,5 +196,10 @@ public class LoginActivity extends AppCompatActivity {
             Toast.makeText(this, "You can't make map requests", Toast.LENGTH_SHORT).show();
         }
         return false;
+    }
+
+    private void hideSoftKeyboard(){
+
+        this.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
     }
 }

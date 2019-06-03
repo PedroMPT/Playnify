@@ -1,21 +1,21 @@
 package pt.ismai.pedro.sisproject.Activities;
 
+import android.animation.ArgbEvaluator;
 import android.content.DialogInterface;
-import android.content.res.Configuration;
 import android.location.Address;
 import android.location.Geocoder;
-import android.support.annotation.NonNull;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.v4.view.ViewPager;
+import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import com.google.android.gms.common.api.Status;
-import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
@@ -26,9 +26,7 @@ import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.FirebaseFirestoreSettings;
 import com.google.firebase.firestore.GeoPoint;
-import com.google.firebase.firestore.ServerTimestamp;
 
 import net.steamcrafted.lineartimepicker.dialog.LinearDatePickerDialog;
 import net.steamcrafted.lineartimepicker.dialog.LinearTimePickerDialog;
@@ -37,18 +35,18 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 
+import pt.ismai.pedro.sisproject.Models.Adapter;
 import pt.ismai.pedro.sisproject.Models.Football;
-import pt.ismai.pedro.sisproject.Models.GameLocation;
+import pt.ismai.pedro.sisproject.Models.TypeOfGame;
 import pt.ismai.pedro.sisproject.Models.User;
-import pt.ismai.pedro.sisproject.Models.UserSingleton;
 import pt.ismai.pedro.sisproject.R;
 
 public class ScheduleGameActivity extends AppCompatActivity {
 
     TextView input_name;
-    Button date, hour, saveGame;
+    Button saveGame;
+    ImageView date, hour;
     LinearDatePickerDialog dialog;
     LinearTimePickerDialog timePickerDialog;
 
@@ -56,11 +54,16 @@ public class ScheduleGameActivity extends AppCompatActivity {
     private FirebaseFirestore mDB;
     private String gameDate;
     private String gameHour;
-    private int gameYear,gameMonth,gameDay,gameMinute;
     private GeoPoint geoPoint;
     private Football game;
     private String userID;
     User captain;
+
+    ViewPager viewPager;
+    Adapter adapter;
+    List<TypeOfGame> typeOfGames;
+    Integer[] colors = null;
+    ArgbEvaluator argbEvaluator = new ArgbEvaluator();
 
 
     List<Place.Field> placeFields = Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.ADDRESS);
@@ -78,6 +81,51 @@ public class ScheduleGameActivity extends AppCompatActivity {
         date = findViewById(R.id.date);
         hour = findViewById(R.id.hour);
         saveGame = findViewById(R.id.saveGame);
+
+        typeOfGames = new ArrayList<>();
+        typeOfGames.add(new TypeOfGame(R.drawable.football_img,"Football"));
+        typeOfGames.add(new TypeOfGame(R.drawable.basketball,"Basketball"));
+        typeOfGames.add(new TypeOfGame(R.drawable.tennis,"Tennis"));
+        typeOfGames.add(new TypeOfGame(R.drawable.running,"Running"));
+
+        adapter = new Adapter(typeOfGames,this);
+        viewPager = findViewById(R.id.viewPager);
+        viewPager.setAdapter(adapter);
+        viewPager.setPadding(130,0,130,0);
+        Integer[] colors_temp = {
+                getResources().getColor(R.color.color1),
+                getResources().getColor(R.color.color2),
+                getResources().getColor(R.color.color3),
+                getResources().getColor(R.color.color4),
+        };
+
+        colors = colors_temp;
+
+        viewPager.setOnPageChangeListener(new ViewPager.OnPageChangeListener() {
+            @Override
+            public void onPageScrolled(int i, float v, int i1) {
+                if ( i < (adapter.getCount() - 1) && i < (colors.length - 1)){
+                    viewPager
+                            .setBackgroundColor((Integer) argbEvaluator
+                            .evaluate(v,
+                                    colors[i],
+                                    colors[i] + 1));
+                }else{
+
+                    viewPager.setBackgroundColor(colors[colors.length - 1]);
+                }
+            }
+
+            @Override
+            public void onPageSelected(int i) {
+
+            }
+
+            @Override
+            public void onPageScrollStateChanged(int i) {
+
+            }
+        });
 
 
         dialog = LinearDatePickerDialog.Builder.with(this)
