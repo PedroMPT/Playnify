@@ -8,7 +8,6 @@ import android.location.Geocoder;
 import android.location.Location;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -34,13 +33,11 @@ import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.api.net.PlacesClient;
 import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
-import com.google.common.collect.Maps;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-
 import com.google.firebase.firestore.QuerySnapshot;
 import com.google.maps.android.clustering.ClusterManager;
 
@@ -148,6 +145,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         placesFragment = (AutocompleteSupportFragment) getSupportFragmentManager().findFragmentById(R.id.places_autocomplete_fragment);
         placesFragment.setPlaceFields(placeFields);
+        placesFragment.setCountry("pt");
         placesFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
             @Override
             public void onPlaceSelected(@NonNull Place place) {
@@ -273,6 +271,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         });
     }
 
+
     private void addMapMarkers(){
 
         if(myMap != null){
@@ -289,7 +288,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
 
             for (Game game : games){
-
                 try{
                     String snippet = "";
                     if (game.getCaptain().getUser_id().equals(userID)){
@@ -299,13 +297,31 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     else{
                         snippet = "Determine route to " + game.getCaptain().getUsername() + "?";
                     }
-
                     int avatar = R.drawable.football_mini;
-                    try{
-                        avatar = Integer.parseInt(game.getCaptain().getAvatar());
-                    }catch (NumberFormatException e){
-                        //toastMessage("O Avatar não deu");
+
+                    switch (game.getTypeOfGame()) {
+                        case 0:
+                            avatar = R.drawable.football_icon;
+                            break;
+                        case 1:
+                            avatar = R.drawable.basketball_icon;
+                            break;
+                        case 2:
+                            avatar = R.drawable.tennis_icon;
+                            break;
+                        case 3:
+                            avatar = R.drawable.running_icon;
+                            break;
+                        case 4:
+                            avatar = R.drawable.golf_icon;
+                            break;
+                        case 5:
+                            avatar = R.drawable.padle_icon;
+                            break;
+                        default:
+                            break;
                     }
+
                     ClusterMarker myNewClusterMarker = new ClusterMarker(
                             new LatLng(game.getGeoPoint().getLatitude(),game.getGeoPoint().getLongitude()),
                             game.getCaptain().getUsername(),
@@ -316,7 +332,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     mClusterMarkers.add(myNewClusterMarker);
 
                 }catch (NullPointerException e){
-                    toastMessage("Tudo falhou");
+                    toastMessage("Something did go wrong!");
                 }
             }
             mClusterManager.cluster();

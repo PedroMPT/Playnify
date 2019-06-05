@@ -14,17 +14,19 @@ public abstract class Game implements IGame {
     private String hour;
     private User captain;
     private GeoPoint geoPoint;
+    private int typeOfGame;
     private @ServerTimestamp Date timestamp;
 
     public Game(){}
 
-    public Game(String gameDate, String hour, User captain, GeoPoint geoPoint) {
+    public Game(String gameDate, String hour, User captain, GeoPoint geoPoint, int typeOfGame) {
         this.capacity = givenValue();
         this.players = new User[capacity];
         this.gameDate = gameDate;
         this.hour = hour;
         this.captain = captain;
         this.geoPoint = geoPoint;
+        this.typeOfGame = typeOfGame;
     }
 
     public String getGameDate() {
@@ -49,6 +51,10 @@ public abstract class Game implements IGame {
 
     public Date getTimestamp() {
         return timestamp;
+    }
+
+    public int getTypeOfGame() {
+        return typeOfGame;
     }
 
     public void setNumberOfPlayers(int numberOfPlayers) {
@@ -81,6 +87,10 @@ public abstract class Game implements IGame {
 
     public void setHour(String hour) {
         this.hour = hour;
+    }
+
+    public void setTypeOfGame(int typeOfGame) {
+        this.typeOfGame = typeOfGame;
     }
 
     public abstract int givenValue();

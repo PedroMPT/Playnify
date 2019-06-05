@@ -6,8 +6,11 @@ import java.util.Date;
 
 public class Golf extends Game {
 
-    public Golf(String gameDate, String hour, User captain, GeoPoint geoPoint) {
-        super(gameDate, hour, captain, geoPoint);
+    public Golf() {
+    }
+
+    public Golf(String gameDate, String hour, User captain, GeoPoint geoPoint, int typeOfGame) {
+        super(gameDate, hour, captain, geoPoint, typeOfGame);
     }
 
     @Override

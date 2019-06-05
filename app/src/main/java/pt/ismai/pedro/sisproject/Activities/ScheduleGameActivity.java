@@ -8,9 +8,11 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.CardView;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -46,7 +48,7 @@ public class ScheduleGameActivity extends AppCompatActivity {
 
     TextView input_name;
     Button saveGame;
-    ImageView date, hour;
+    CardView date, hour;
     LinearDatePickerDialog dialog;
     LinearTimePickerDialog timePickerDialog;
 
@@ -58,6 +60,7 @@ public class ScheduleGameActivity extends AppCompatActivity {
     private Football game;
     private String userID;
     User captain;
+    private int valueFortypeOfGame;
 
     ViewPager viewPager;
     Adapter adapter;
@@ -87,6 +90,8 @@ public class ScheduleGameActivity extends AppCompatActivity {
         typeOfGames.add(new TypeOfGame(R.drawable.basketball,"Basketball"));
         typeOfGames.add(new TypeOfGame(R.drawable.tennis,"Tennis"));
         typeOfGames.add(new TypeOfGame(R.drawable.running,"Running"));
+        typeOfGames.add(new TypeOfGame(R.drawable.golf,"Golf"));
+        typeOfGames.add(new TypeOfGame(R.drawable.padle,"Padle"));
 
         adapter = new Adapter(typeOfGames,this);
         viewPager = findViewById(R.id.viewPager);
@@ -97,6 +102,8 @@ public class ScheduleGameActivity extends AppCompatActivity {
                 getResources().getColor(R.color.color2),
                 getResources().getColor(R.color.color3),
                 getResources().getColor(R.color.color4),
+                getResources().getColor(R.color.color5),
+                getResources().getColor(R.color.color6),
         };
 
         colors = colors_temp;
@@ -110,6 +117,8 @@ public class ScheduleGameActivity extends AppCompatActivity {
                             .evaluate(v,
                                     colors[i],
                                     colors[i] + 1));
+
+
                 }else{
 
                     viewPager.setBackgroundColor(colors[colors.length - 1]);
@@ -119,6 +128,7 @@ public class ScheduleGameActivity extends AppCompatActivity {
             @Override
             public void onPageSelected(int i) {
 
+                valueFortypeOfGame = i;
             }
 
             @Override
@@ -130,6 +140,8 @@ public class ScheduleGameActivity extends AppCompatActivity {
 
         dialog = LinearDatePickerDialog.Builder.with(this)
                 .setYear(2019)
+                .setDialogBackgroundColor(getResources().getColor(R.color.primary_dark))
+                .setPickerBackgroundColor(getResources().getColor(R.color.color1))
                 .setButtonCallback(new LinearDatePickerDialog.ButtonCallback() {
                     @Override
                     public void onPositive(DialogInterface dialog, int year, int month, int day) {
@@ -144,7 +156,10 @@ public class ScheduleGameActivity extends AppCompatActivity {
                 })
                 .build();
 
-        timePickerDialog = LinearTimePickerDialog.Builder.with(this).setButtonCallback(new LinearTimePickerDialog.ButtonCallback() {
+        timePickerDialog = LinearTimePickerDialog.Builder.with(this)
+                .setDialogBackgroundColor(getResources().getColor(R.color.primary_dark))
+                .setPickerBackgroundColor(getResources().getColor(R.color.color1))
+                .setButtonCallback(new LinearTimePickerDialog.ButtonCallback() {
             @Override
             public void onPositive(DialogInterface dialog, int hour, int minutes) {
 
@@ -241,7 +256,7 @@ public class ScheduleGameActivity extends AppCompatActivity {
 
                 if (task.isSuccessful()){
                     captain = task.getResult().toObject(User.class);
-                    game = new Football(gameDate,gameHour,captain,geoPoint);
+                    game = new Football(gameDate,gameHour,captain,geoPoint,valueFortypeOfGame);
                     game.addPlayers(captain);
                     game.setTimestamp(null);
                     saveGame();
