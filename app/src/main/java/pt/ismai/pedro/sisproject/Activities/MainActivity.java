@@ -1,19 +1,25 @@
 package pt.ismai.pedro.sisproject.Activities;
 
 import android.Manifest;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.ImageButton;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
@@ -25,7 +31,11 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.libraries.places.api.Places;
@@ -36,10 +46,17 @@ import com.google.android.libraries.places.widget.listener.PlaceSelectionListene
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.CollectionReference;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QuerySnapshot;
+import com.google.maps.DirectionsApiRequest;
+import com.google.maps.GeoApiContext;
+import com.google.maps.PendingResult;
 import com.google.maps.android.clustering.ClusterManager;
+import com.google.maps.internal.PolylineEncoding;
+import com.google.maps.model.DirectionsResult;
+import com.google.maps.model.DirectionsRoute;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -50,17 +67,24 @@ import de.hdodenhof.circleimageview.CircleImageView;
 import pt.ismai.pedro.sisproject.Models.ClusterMarker;
 import pt.ismai.pedro.sisproject.Models.Football;
 import pt.ismai.pedro.sisproject.Models.Game;
+import pt.ismai.pedro.sisproject.Models.GameLocation;
+import pt.ismai.pedro.sisproject.Models.PolylineData;
 import pt.ismai.pedro.sisproject.R;
 import pt.ismai.pedro.sisproject.util.MyClusterManagerRenderer;
 
 import static pt.ismai.pedro.sisproject.Constants.Constants.PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION;
 
-public class MainActivity extends AppCompatActivity implements OnMapReadyCallback {
+public class MainActivity extends AppCompatActivity implements OnMapReadyCallback, GoogleMap.OnInfoWindowClickListener, GoogleMap.OnPolylineClickListener {
+
+
 
     private boolean mLocationPermissionGranted = false;
     private static final String FINE_LOCATION = Manifest.permission.ACCESS_FINE_LOCATION;
     private static final String COARSE_LOCATION = Manifest.permission.ACCESS_COARSE_LOCATION;
     private static final float DEFAULT_ZOOM = 14.5f;
+    //private Handler mHandler = new Handler();
+    //private Runnable mRunnable;
+    //private static final int LOCATION_UPDATE_INTERVAL = 3000;
     private GoogleMap myMap;
     PlacesClient placesClient;
     List<Place.Field> placeFields = Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.ADDRESS);
@@ -68,13 +92,19 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private FusedLocationProviderClient fusedLocationProviderClient;
     FloatingActionButton locationButton;
     CircleImageView profile_photo;
+    ImageButton btn_reset;
     private FirebaseAuth mAuth;
     private FirebaseFirestore mDB;
     private ArrayList<Football> games = new ArrayList<>();
     private ClusterManager mClusterManager;
     private MyClusterManagerRenderer mClusterManagerRenderer;
     private ArrayList<ClusterMarker> mClusterMarkers = new ArrayList<>();
+    private ArrayList<PolylineData> mPolylinesData = new ArrayList<>();
+    private ArrayList<Marker> mTripMarkers = new ArrayList<>();
+    private GeoApiContext mGeoAPIContext = null;
+    private Marker mSelectedMarker = null;
     String userID;
+    private LatLng mLocation;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -82,14 +112,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         setContentView(R.layout.activity_main);
         locationButton = findViewById(R.id.ic_gps);
         profile_photo = findViewById(R.id.profilePhoto);
+        btn_reset = findViewById(R.id.btn_reset_map);
         mAuth = FirebaseAuth.getInstance();
         mDB = FirebaseFirestore.getInstance();
         userID = mAuth.getCurrentUser().getUid();
         getLocationPermission();
         loadUserInfo();
         getGamesLocation();
-        //addMapMarkers();
-
 
         profile_photo.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -104,6 +133,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             public void onClick(View v) {
 
                 getDevicelocation();
+            }
+        });
+
+        btn_reset.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                addMapMarkers();
             }
         });
 
@@ -134,10 +170,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             myMap = googleMap;
             myMap.setMyLocationEnabled(true);
             myMap.getUiSettings().setMyLocationButtonEnabled(false);
-            //getGamesLocation();
-            //addMapMarkers();
             initPlaces();
             setupPlaceAutoComplete();
+            myMap.setOnInfoWindowClickListener(this);
+            myMap.setOnPolylineClickListener(this);
         }
     }
 
@@ -191,6 +227,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     public void onComplete(@NonNull Task task) {
                         if (task.isSuccessful()){
                             Location currentLocation = (Location) task.getResult();
+                            mLocation = new LatLng(currentLocation.getLatitude(),currentLocation.getLongitude());
                             moveCamera(new LatLng(currentLocation.getLatitude(),
                                     currentLocation.getLongitude()),DEFAULT_ZOOM,"My Location");
                             addMapMarkers();
@@ -221,6 +258,92 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(MainActivity.this);
+
+        if (mGeoAPIContext == null){
+
+            mGeoAPIContext = new GeoApiContext
+                    .Builder().
+                    apiKey(getString(R.string.google_directions_api_key))
+                    .build();
+        }
+    }
+
+    private void addPolylinesToMap(final DirectionsResult result){
+        new Handler(Looper.getMainLooper()).post(new Runnable() {
+            @Override
+            public void run() {
+
+                if (mPolylinesData.size() > 0){
+                    for (PolylineData polylineData : mPolylinesData){
+
+                        polylineData.getPolyline().remove();
+                    }
+                    mPolylinesData.clear();
+                    mPolylinesData = new ArrayList<>();
+                }
+                double duration = 9999999;
+                for(DirectionsRoute route: result.routes){
+                    List<com.google.maps.model.LatLng> decodedPath = PolylineEncoding
+                            .decode(route.overviewPolyline
+                                    .getEncodedPath());
+
+                    List<LatLng> newDecodedPath = new ArrayList<>();
+
+                    // This loops through all the LatLng coordinates of ONE polyline.
+                    for(com.google.maps.model.LatLng latLng: decodedPath){
+                        newDecodedPath.add(new LatLng(
+                                latLng.lat,
+                                latLng.lng
+                        ));
+                    }
+                    Polyline polyline = myMap.addPolyline(new PolylineOptions().addAll(newDecodedPath));
+                    polyline.setColor(ContextCompat.getColor(getApplicationContext(), R.color.primary_dark));
+                    polyline.setClickable(true);
+                    mPolylinesData.add(new PolylineData(polyline,route.legs[0]));
+
+                    double tempduration = route.legs[0].duration.inSeconds;
+
+                    if (tempduration < duration){
+                        duration = tempduration;
+                        onPolylineClick(polyline);
+                        zoomRoute(polyline.getPoints());
+                    }
+
+                }
+            }
+        });
+    }
+
+    private void calculateDirections(Marker marker){
+
+        com.google.maps.model.LatLng destination = new com.google.maps.model.LatLng(
+                marker.getPosition().latitude,
+                marker.getPosition().longitude
+        );
+        DirectionsApiRequest directions = new DirectionsApiRequest(mGeoAPIContext);
+
+        directions.alternatives(true);
+        directions.origin(
+                new com.google.maps.model.LatLng(
+                        mLocation.latitude, mLocation.longitude
+                )
+        );
+        directions.destination(destination).setCallback(new PendingResult.Callback<DirectionsResult>() {
+            @Override
+            public void onResult(DirectionsResult result) {
+
+                Log.d("ActivityTeste", "OnResult: routes: " + result.routes[0].toString());
+                Log.d("ActivityTeste", "OnResult: geocodeWayPoints: " + result.geocodedWaypoints[0].toString());
+               addPolylinesToMap(result);
+            }
+
+            @Override
+            public void onFailure(Throwable e) {
+
+                Log.d("Failed",e.getMessage());
+
+            }
+        });
     }
 
     private void getLocationPermission(){
@@ -271,10 +394,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         });
     }
 
-
     private void addMapMarkers(){
 
         if(myMap != null){
+
+            resetMap();
             if (mClusterManager == null){
                 mClusterManager = new ClusterManager<ClusterMarker>(getApplicationContext(),myMap);
             }
@@ -339,6 +463,59 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
+    private void removeTripMarkers(){
+
+        for (Marker marker : mTripMarkers){
+
+            marker.remove();
+        }
+    }
+
+    private void resetSelectedMarker(){
+        if (mSelectedMarker != null){
+            mSelectedMarker = null;
+            removeTripMarkers();
+        }
+    }
+
+    private void resetMap(){
+        if(myMap != null) {
+            myMap.clear();
+
+            if(mClusterManager != null){
+                mClusterManager.clearItems();
+            }
+
+            if (mClusterMarkers.size() > 0) {
+                mClusterMarkers.clear();
+                mClusterMarkers = new ArrayList<>();
+            }
+
+            if(mPolylinesData.size() > 0){
+                mPolylinesData.clear();
+                mPolylinesData = new ArrayList<>();
+            }
+        }
+    }
+
+    public void zoomRoute(List<LatLng> lstLatLngRoute) {
+
+        if (myMap == null || lstLatLngRoute == null || lstLatLngRoute.isEmpty()) return;
+
+        LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
+        for (LatLng latLngPoint : lstLatLngRoute)
+            boundsBuilder.include(latLngPoint);
+
+        int routePadding = 120;
+        LatLngBounds latLngBounds = boundsBuilder.build();
+
+        myMap.animateCamera(
+                CameraUpdateFactory.newLatLngBounds(latLngBounds, routePadding),
+                600,
+                null
+        );
+    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
 
@@ -388,4 +565,59 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+    }
+
+    @Override
+    public void onInfoWindowClick(final Marker marker) {
+
+        final AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setMessage(marker.getSnippet())
+                .setCancelable(true)
+                .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                    public void onClick(@SuppressWarnings("unused") final DialogInterface dialog, @SuppressWarnings("unused") final int id) {
+                        resetSelectedMarker();
+                        mSelectedMarker = marker;
+                        calculateDirections(marker);
+                        dialog.dismiss();
+
+                    }
+                })
+                .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                    public void onClick(final DialogInterface dialog, @SuppressWarnings("unused") final int id) {
+                        dialog.cancel();
+                    }
+                });
+        final AlertDialog alert = builder.create();
+        alert.show();
+
+    }
+
+    @Override
+    public void onPolylineClick(Polyline polyline) {
+        int index = 0;
+        for(PolylineData polylineData: mPolylinesData){
+            index++;
+            if(polyline.getId().equals(polylineData.getPolyline().getId())){
+                polylineData.getPolyline().setColor(ContextCompat.getColor(this, R.color.primary_dark));
+                polylineData.getPolyline().setZIndex(1);
+
+                LatLng endLocation  = new LatLng(polylineData.getLeg().endLocation.lat
+                        ,polylineData.getLeg().endLocation.lng);
+                Marker marker = myMap.addMarker( new MarkerOptions().position(endLocation)
+                .title("Trip: 0" + index).snippet("Duration: " + polylineData.getLeg().duration));
+
+                marker.showInfoWindow();
+
+                mTripMarkers.add(marker);
+            }
+            else{
+                polylineData.getPolyline().setColor(ContextCompat.getColor(this, R.color.iron));
+                polylineData.getPolyline().setZIndex(0);
+            }
+        }
+
+    }
 }
