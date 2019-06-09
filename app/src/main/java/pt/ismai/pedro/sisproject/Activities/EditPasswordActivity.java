@@ -28,6 +28,9 @@ public class EditPasswordActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_edit_password);
+        getSupportActionBar().setTitle("EDIT PASSWORD");
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        getSupportActionBar().setDisplayShowHomeEnabled(true);
 
         mAuth = FirebaseAuth.getInstance();
         input_password = findViewById(R.id.input_password);
@@ -69,5 +72,12 @@ public class EditPasswordActivity extends AppCompatActivity {
         intent.putExtra("ouserId", user.getUid());
         startActivity(intent);
         finish();
+    }
+
+    @Override
+    public boolean onSupportNavigateUp() {
+        onBackPressed();
+        executeActivity(EditProfileActivity.class);
+        return true;
     }
 }

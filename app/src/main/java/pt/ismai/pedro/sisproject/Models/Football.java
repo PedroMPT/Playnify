@@ -26,8 +26,4 @@ public class Football extends Game {
         super.addPlayers(player);
     }
 
-    @Override
-    public int givenValue() {
-        return 12;
-    }
 }

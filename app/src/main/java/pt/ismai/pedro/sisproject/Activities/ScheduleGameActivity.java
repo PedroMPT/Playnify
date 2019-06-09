@@ -2,6 +2,7 @@ package pt.ismai.pedro.sisproject.Activities;
 
 import android.animation.ArgbEvaluator;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.location.Address;
 import android.location.Geocoder;
 import android.os.Bundle;
@@ -40,6 +41,7 @@ import java.util.List;
 
 import pt.ismai.pedro.sisproject.Models.Adapter;
 import pt.ismai.pedro.sisproject.Models.Football;
+import pt.ismai.pedro.sisproject.Models.Game;
 import pt.ismai.pedro.sisproject.Models.TypeOfGame;
 import pt.ismai.pedro.sisproject.Models.User;
 import pt.ismai.pedro.sisproject.R;
@@ -48,7 +50,7 @@ public class ScheduleGameActivity extends AppCompatActivity {
 
     TextView input_name;
     Button saveGame;
-    CardView date, hour;
+    ImageView date, hour;
     LinearDatePickerDialog dialog;
     LinearTimePickerDialog timePickerDialog;
 
@@ -57,7 +59,7 @@ public class ScheduleGameActivity extends AppCompatActivity {
     private String gameDate;
     private String gameHour;
     private GeoPoint geoPoint;
-    private Football game;
+    private Game game;
     private String userID;
     User captain;
     private int valueFortypeOfGame;
@@ -76,6 +78,10 @@ public class ScheduleGameActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_schedule_game);
+
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        getSupportActionBar().setDisplayShowHomeEnabled(true);
+        getSupportActionBar().setDisplayShowTitleEnabled(false);
 
         mAuth = FirebaseAuth.getInstance();
         mDB = FirebaseFirestore.getInstance();
@@ -204,7 +210,9 @@ public class ScheduleGameActivity extends AppCompatActivity {
     private void loadUserInfo() {
         FirebaseUser user = mAuth.getCurrentUser();
         if (user != null){
-            input_name.setText("Olá " + user.getDisplayName() + " onde vamos jogar :)");
+            String[] names = user.getDisplayName().split(" ");
+            String firstName = names[0];
+            input_name.setText("Olá " + firstName + " onde vamos jogar :)");
         }
     }
 
@@ -245,7 +253,6 @@ public class ScheduleGameActivity extends AppCompatActivity {
 
     private void getUserDetails(){
 
-
         DocumentReference userRef = mDB
                 .collection(getString(R.string.collection_users))
                 .document(userID);
@@ -255,28 +262,51 @@ public class ScheduleGameActivity extends AppCompatActivity {
             public void onComplete(@NonNull Task<DocumentSnapshot> task) {
 
                 if (task.isSuccessful()){
+
+                    DocumentReference gameRefCollection = mDB.collection(getString(R.string.collection_games)).document();
                     captain = task.getResult().toObject(User.class);
-                    game = new Football(gameDate,gameHour,captain,geoPoint,valueFortypeOfGame);
+                    game = new Game(gameDate,gameHour,captain,geoPoint,valueFortypeOfGame);
+                    game.setGameID(gameRefCollection.getId());
+                    game.setCapacity(game.gamePlayers());
                     game.addPlayers(captain);
+                    game.setNumberOfPlayers(1);
                     game.setTimestamp(null);
-                    saveGame();
+
+
+                    gameRefCollection.set(game).addOnCompleteListener(new OnCompleteListener<Void>() {
+                        @Override
+                        public void onComplete(@NonNull Task<Void> task) {
+
+                            if (task.isSuccessful()){
+
+                                toastMessage("Game Saved!");
+                            }
+
+                            else{
+
+                                toastMessage(task.getException().getMessage());
+                            }
+                        }
+                    });
+
                 }
                 else toastMessage(task.getException().getMessage());
             }
         });
     }
 
-    private void saveGame(){
-        CollectionReference gameRefCollection = mDB.collection(getString(R.string.collection_games));
-        gameRefCollection.add(game).addOnCompleteListener(new OnCompleteListener<DocumentReference>() {
-            @Override
-            public void onComplete(@NonNull Task<DocumentReference> task) {
+    private void executeActivity(Class<?> subActivity){
+        FirebaseUser user = mAuth.getCurrentUser();
+        Intent intent = new Intent(this,subActivity);
+        intent.putExtra("objectId", user.getUid());
+        startActivity(intent);
+        finish();
+    }
 
-                if (task.isSuccessful()){
-                    toastMessage("sucess");
-                }else toastMessage(task.getException().getMessage());
-            }
-        });
-
+    @Override
+    public boolean onSupportNavigateUp() {
+        onBackPressed();
+        executeActivity(ProfileActivity.class);
+        return true;
     }
 }

@@ -26,6 +26,9 @@ public class EditNameActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        getSupportActionBar().setTitle("EDIT NAME");
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        getSupportActionBar().setDisplayShowHomeEnabled(true);
         setContentView(R.layout.activity_edit_name);
         mAuth = FirebaseAuth.getInstance();
         input_name = findViewById(R.id.input_name);
@@ -72,5 +75,12 @@ public class EditNameActivity extends AppCompatActivity {
         intent.putExtra("userId", user.getUid());
         startActivity(intent);
         finish();
+    }
+
+    @Override
+    public boolean onSupportNavigateUp() {
+        onBackPressed();
+        executeActivity(EditProfileActivity.class);
+        return true;
     }
 }

@@ -12,6 +12,8 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.annotation.NonNull;
+import android.support.design.widget.BottomSheetBehavior;
+import android.support.design.widget.BottomSheetDialog;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -19,7 +21,9 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
@@ -49,7 +53,10 @@ import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.GeoPoint;
+import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.firestore.model.DocumentCollections;
 import com.google.maps.DirectionsApiRequest;
 import com.google.maps.GeoApiContext;
 import com.google.maps.PendingResult;
@@ -57,6 +64,8 @@ import com.google.maps.android.clustering.ClusterManager;
 import com.google.maps.internal.PolylineEncoding;
 import com.google.maps.model.DirectionsResult;
 import com.google.maps.model.DirectionsRoute;
+
+import org.w3c.dom.Text;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -69,22 +78,23 @@ import pt.ismai.pedro.sisproject.Models.Football;
 import pt.ismai.pedro.sisproject.Models.Game;
 import pt.ismai.pedro.sisproject.Models.GameLocation;
 import pt.ismai.pedro.sisproject.Models.PolylineData;
+import pt.ismai.pedro.sisproject.Models.User;
+import pt.ismai.pedro.sisproject.Models.UserSingleton;
 import pt.ismai.pedro.sisproject.R;
 import pt.ismai.pedro.sisproject.util.MyClusterManagerRenderer;
 
 import static pt.ismai.pedro.sisproject.Constants.Constants.PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION;
 
-public class MainActivity extends AppCompatActivity implements OnMapReadyCallback, GoogleMap.OnInfoWindowClickListener, GoogleMap.OnPolylineClickListener {
-
+public class MainActivity extends AppCompatActivity
+        implements OnMapReadyCallback,
+        GoogleMap.OnInfoWindowClickListener,
+        GoogleMap.OnPolylineClickListener{
 
 
     private boolean mLocationPermissionGranted = false;
     private static final String FINE_LOCATION = Manifest.permission.ACCESS_FINE_LOCATION;
     private static final String COARSE_LOCATION = Manifest.permission.ACCESS_COARSE_LOCATION;
     private static final float DEFAULT_ZOOM = 14.5f;
-    //private Handler mHandler = new Handler();
-    //private Runnable mRunnable;
-    //private static final int LOCATION_UPDATE_INTERVAL = 3000;
     private GoogleMap myMap;
     PlacesClient placesClient;
     List<Place.Field> placeFields = Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.ADDRESS);
@@ -95,7 +105,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     ImageButton btn_reset;
     private FirebaseAuth mAuth;
     private FirebaseFirestore mDB;
-    private ArrayList<Football> games = new ArrayList<>();
+    private ArrayList<Game> games = new ArrayList<>();
     private ClusterManager mClusterManager;
     private MyClusterManagerRenderer mClusterManagerRenderer;
     private ArrayList<ClusterMarker> mClusterMarkers = new ArrayList<>();
@@ -105,11 +115,19 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private Marker mSelectedMarker = null;
     String userID;
     private LatLng mLocation;
+    private BottomSheetDialog bottomSheetDialog;
+    View bottomSheetDialogView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        bottomSheetDialog = new BottomSheetDialog(MainActivity.this);
+        bottomSheetDialogView = getLayoutInflater().inflate(R.layout.fragment_bottom_sheet,null);
+        bottomSheetDialog.setContentView(bottomSheetDialogView);
+
+
         locationButton = findViewById(R.id.ic_gps);
         profile_photo = findViewById(R.id.profilePhoto);
         btn_reset = findViewById(R.id.btn_reset_map);
@@ -142,6 +160,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 addMapMarkers();
             }
         });
+
 
     }
 
@@ -386,8 +405,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 if (task.isSuccessful()){
 
                     for(DocumentSnapshot document:task.getResult()){
-                        Football football = document.toObject(Football.class);
-                        games.add(football);
+                        Game game = document.toObject(Football.class);
+                        games.add(game);
                     }
                 }
             }
@@ -414,33 +433,32 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             for (Game game : games){
                 try{
                     String snippet = "";
-                    if (game.getCaptain().getUser_id().equals(userID)){
-
-                        snippet = "This is you";
-                    }
-                    else{
-                        snippet = "Determine route to " + game.getCaptain().getUsername() + "?";
-                    }
                     int avatar = R.drawable.football_mini;
 
                     switch (game.getTypeOfGame()) {
                         case 0:
                             avatar = R.drawable.football_icon;
+                            snippet = "Football Game";
                             break;
                         case 1:
                             avatar = R.drawable.basketball_icon;
+                            snippet = "Basketball Game";
                             break;
                         case 2:
                             avatar = R.drawable.tennis_icon;
+                            snippet = "Tennis Game";
                             break;
                         case 3:
                             avatar = R.drawable.running_icon;
+                            snippet = "Running Marathon";
                             break;
                         case 4:
                             avatar = R.drawable.golf_icon;
+                            snippet = "Golf Game";
                             break;
                         case 5:
                             avatar = R.drawable.padle_icon;
+                            snippet = "Padle Game";
                             break;
                         default:
                             break;
@@ -573,25 +591,96 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     public void onInfoWindowClick(final Marker marker) {
 
-        final AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setMessage(marker.getSnippet())
-                .setCancelable(true)
-                .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
-                    public void onClick(@SuppressWarnings("unused") final DialogInterface dialog, @SuppressWarnings("unused") final int id) {
-                        resetSelectedMarker();
-                        mSelectedMarker = marker;
-                        calculateDirections(marker);
-                        dialog.dismiss();
+        TextView username = bottomSheetDialogView.findViewById(R.id.username);
+        TextView capacity = bottomSheetDialogView.findViewById(R.id.capacity);
+        TextView playersLeft = bottomSheetDialogView.findViewById(R.id.playersLeft);
+        TextView date = bottomSheetDialogView.findViewById(R.id.date);
+        TextView time = bottomSheetDialogView.findViewById(R.id.time);
+        Button btn_directions = bottomSheetDialogView.findViewById(R.id.btn_directions);
+        Button btn_reserve_spot = bottomSheetDialogView.findViewById(R.id.btn_enter_game);
+        CircleImageView profile = bottomSheetDialog.findViewById(R.id.profilePhoto);
 
-                    }
-                })
-                .setNegativeButton("No", new DialogInterface.OnClickListener() {
-                    public void onClick(final DialogInterface dialog, @SuppressWarnings("unused") final int id) {
-                        dialog.cancel();
-                    }
-                });
-        final AlertDialog alert = builder.create();
-        alert.show();
+
+        com.google.maps.model.LatLng destination = new com.google.maps.model.LatLng(
+                marker.getPosition().latitude,
+                marker.getPosition().longitude
+        );
+        for (Game game : games){
+
+            if (game.getGeoPoint().getLatitude() == destination.lat
+                    && game.getGeoPoint().getLongitude() == destination.lng){
+
+                int playersLeftToGame = game.getCapacity() - game.getNumberOfPlayers();
+
+                username.setText("Game Captain: " +  game.getCaptain().getUsername());
+                capacity.setText(String.valueOf(game.getCapacity()) );
+                playersLeft.setText(String.valueOf(playersLeftToGame));
+                date.setText(game.getGameDate());
+                time.setText(game.getHour());
+
+                FirebaseUser user = mAuth.getCurrentUser();
+
+                if (game.getCaptain().getUser_id().equals(user.getUid())){
+
+                    Glide.with(this ).load(user.getPhotoUrl().toString()).into(profile);
+                }
+            }
+
+            btn_directions.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    resetSelectedMarker();
+                    mSelectedMarker = marker;
+                    calculateDirections(marker);
+                    bottomSheetDialog.hide();
+
+                }
+            });
+
+
+            btn_reserve_spot.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    DocumentReference userRef = mDB.collection(getString(R.string.collection_users)).document(mAuth.getUid());
+
+                    userRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+                        @Override
+                        public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+
+                            if (task.isSuccessful()){
+                                User user = task.getResult().toObject(User.class);
+
+                                if (game.getNumberOfPlayers() < game.getCapacity()){
+                                    game.addPlayers(user);
+
+
+                                    DocumentReference gameRef = mDB.
+                                            collection(getString(R.string.collection_games)).document(game.getGameID());
+                                    gameRef.update("numberOfPlayers",game.getNumberOfPlayers(),
+                                            "players",
+                                            game.getPlayers()).addOnCompleteListener(new OnCompleteListener<Void>() {
+                                        @Override
+                                        public void onComplete(@NonNull Task<Void> task) {
+                                            if (task.isSuccessful()){
+
+                                                toastMessage("Welcome to the game :)");
+                                            }
+
+                                            else{
+
+                                                toastMessage("Sorry, game is full :(");
+                                            }
+                                        }
+                                    });
+                                }
+                            }
+                        }
+                    });
+
+                }
+            });
+        }
+        bottomSheetDialog.show();
 
     }
 
@@ -620,4 +709,5 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
 
     }
+
 }

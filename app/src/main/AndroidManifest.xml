@@ -18,11 +18,12 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".Activities.ScheduleGameActivity" android:theme="@style/AppTheme.NoActionBar"/>
-        <activity android:name=".Activities.EditPasswordActivity" android:theme="@style/AppTheme.Dark"/>
-        <activity android:name=".Activities.EditEmailActivity" android:theme="@style/AppTheme.Dark"/>
-        <activity android:name=".Activities.EditNameActivity" android:theme="@style/AppTheme.Dark"/>
-        <activity android:name=".Activities.EditProfileActivity" android:theme="@style/AppTheme.Dark"/>
+        <activity android:name=".Activities.ScheduleGameActivity" android:theme="@style/AppTheme.ActionBar.Transparent"/>
+        <activity android:name=".Activities.EditPasswordActivity" android:theme="@style/edit_profile"/>
+        <activity android:name=".Activities.EditEmailActivity" android:theme="@style/edit_profile"/>
+        <activity android:name=".Activities.EditNameActivity" android:theme="@style/edit_profile"/>
+        <activity android:name=".Activities.EditProfileActivity" android:theme="@style/AppTheme.ActionBar.Transparent"/>
+
         <activity
             android:name=".Activities.ProfileActivity"
             android:theme="@style/AppTheme.Dark" />

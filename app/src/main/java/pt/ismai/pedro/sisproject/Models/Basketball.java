@@ -18,8 +18,5 @@ public class Basketball extends Game{
         super.addPlayers(player);
     }
 
-    @Override
-    public int givenValue() {
-        return 10;
-    }
+
 }

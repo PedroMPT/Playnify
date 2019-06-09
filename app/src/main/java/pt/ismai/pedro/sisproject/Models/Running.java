@@ -19,8 +19,4 @@ public class Running extends Game {
         super.addPlayers(player);
     }
 
-    @Override
-    public int givenValue() {
-        return 4;
-    }
 }

@@ -19,8 +19,4 @@ public class Golf extends Game {
         super.addPlayers(player);
     }
 
-    @Override
-    public int givenValue() {
-        return 4;
-    }
 }

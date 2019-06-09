@@ -28,6 +28,9 @@ public class EditEmailActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_edit_email);
+        getSupportActionBar().setTitle("EDIT EMAIL");
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        getSupportActionBar().setDisplayShowHomeEnabled(true);
 
         mAuth = FirebaseAuth.getInstance();
         input_email = findViewById(R.id.input_email);
@@ -72,5 +75,12 @@ public class EditEmailActivity extends AppCompatActivity {
         intent.putExtra("userId", user.getUid());
         startActivity(intent);
         finish();
+    }
+
+    @Override
+    public boolean onSupportNavigateUp() {
+        onBackPressed();
+        executeActivity(EditProfileActivity.class);
+        return true;
     }
 }

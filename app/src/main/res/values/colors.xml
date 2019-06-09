@@ -25,4 +25,7 @@
     <color name="color4">#59717c</color>
     <color name="color5">#388e3c</color>
     <color name="color6">#bf360c</color>
+
+    <color name="semi_transparent">#66000000</color>
+
 </resources>

@@ -1,19 +1,13 @@
 package pt.ismai.pedro.sisproject.Activities;
 
-import android.Manifest;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.view.View;
-import android.widget.Button;
-import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -29,6 +23,7 @@ import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 
 import de.hdodenhof.circleimageview.CircleImageView;
+import pt.ismai.pedro.sisproject.Models.User;
 import pt.ismai.pedro.sisproject.R;
 
 
@@ -45,12 +40,15 @@ public class EditProfileActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_edit_profile);
-        mAuth = FirebaseAuth.getInstance();
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        getSupportActionBar().setDisplayShowHomeEnabled(true);
+        getSupportActionBar().setDisplayShowTitleEnabled(false);
 
+        mAuth = FirebaseAuth.getInstance();
         input_name = findViewById(R.id.input_name);
         input_email = findViewById(R.id.input_email);
         input_password = findViewById(R.id.input_password);
-        profile_photo = findViewById(R.id.profile_photo);
+        profile_photo = findViewById(R.id.profilePhoto);
 
         loadUserInfo();
 
@@ -174,5 +172,12 @@ public class EditProfileActivity extends AppCompatActivity {
         intent.putExtra("objectId", user.getUid());
         startActivity(intent);
         finish();
+    }
+
+    @Override
+    public boolean onSupportNavigateUp() {
+        onBackPressed();
+        executeActivity(ProfileActivity.class);
+        return true;
     }
 }

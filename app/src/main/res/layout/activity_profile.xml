@@ -127,9 +127,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
             <ImageView
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:src="@drawable/ic_mode_edit_black_24dp"/>
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:src="@drawable/edit"/>
             <TextView
                 android:textStyle="bold"
                 android:textColor="@color/primary_darker"
@@ -148,9 +148,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
             <ImageView
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:src="@drawable/ic_mode_edit_black_24dp"/>
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:src="@drawable/trophy"/>
             <TextView
                 android:textStyle="bold"
                 android:textColor="@color/primary_darker"
