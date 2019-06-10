@@ -225,6 +225,7 @@ public class ScheduleGameActivity extends AppCompatActivity {
         //Set the fragment with list of values: Place ID, Place Name and Place Name
         if (placesFragment != null) {
             placesFragment.setPlaceFields(placeFields);
+            placesFragment.setCountry("PRT");
             // When the user clicks the place searched we want to send him to the correct location
             placesFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
                 @Override
