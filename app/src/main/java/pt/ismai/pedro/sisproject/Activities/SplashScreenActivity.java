@@ -47,7 +47,9 @@ public class SplashScreenActivity extends AppCompatActivity {
     private void executeActivity(Class<?> subActivity){
         FirebaseUser user = mAuth.getCurrentUser();
         Intent intent = new Intent(this,subActivity);
-        intent.putExtra("userId", user.getUid());
+        if (user != null) {
+            intent.putExtra("userId", user.getUid());
+        }
         startActivity(intent);
 
     }

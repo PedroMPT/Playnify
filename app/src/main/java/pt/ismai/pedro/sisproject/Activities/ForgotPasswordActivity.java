@@ -13,6 +13,8 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 
+import java.util.Objects;
+
 import pt.ismai.pedro.sisproject.R;
 
 public class ForgotPasswordActivity extends AppCompatActivity {
@@ -20,7 +22,6 @@ public class ForgotPasswordActivity extends AppCompatActivity {
     private FirebaseAuth mAuth;
     EditText input_email;
     AppCompatButton btn_forgot_password;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,7 +54,7 @@ public class ForgotPasswordActivity extends AppCompatActivity {
                                         toastMessage("Password sent to your email");
                                     }
                                     else{
-                                        toastMessage(task.getException().getMessage());
+                                        toastMessage(Objects.requireNonNull(task.getException()).getMessage());
                                     }
                                     btn_forgot_password.setEnabled(true);
                                     progressDialog.dismiss();
@@ -66,7 +67,6 @@ public class ForgotPasswordActivity extends AppCompatActivity {
     }
 
     private void toastMessage(String message) {
-
         Toast.makeText(this,message,Toast.LENGTH_LONG).show();
     }
 }

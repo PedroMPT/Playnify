@@ -26,6 +26,8 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreSettings;
 
+import java.util.Objects;
+
 import pt.ismai.pedro.sisproject.Models.User;
 import pt.ismai.pedro.sisproject.Models.UserSingleton;
 import pt.ismai.pedro.sisproject.R;
@@ -61,11 +63,10 @@ public class LoginActivity extends AppCompatActivity {
                 String email = input_email.getText().toString();
                 String password = input_password.getText().toString();
 
-                hideSoftKeyboard();
-
                 if(isServicesOK()){
                     if(!email.equals("") && !password.equals("")){
                         signIn(email,password);
+                        hideSoftKeyboard();
                     }else{
                         toastMessage("Please fill all the fields");
                     }
@@ -103,15 +104,14 @@ public class LoginActivity extends AppCompatActivity {
                     FirebaseFirestore db = FirebaseFirestore.getInstance();
                     FirebaseFirestoreSettings settings = new FirebaseFirestoreSettings.Builder().build();
                     db.setFirestoreSettings(settings);
-
-                    DocumentReference userRef = db.collection(getString(R.string.collection_users)).document(mAuth.getUid());
+                    DocumentReference userRef = db.collection(getString(R.string.collection_users)).document(Objects.requireNonNull(mAuth.getUid()));
 
                     userRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
                         @Override
                         public void onComplete(@NonNull Task<DocumentSnapshot> task) {
-
                             if (task.isSuccessful()){
-                                User user = task.getResult().toObject(User.class);
+                                //Objects.requiredNonNull
+                                User user = Objects.requireNonNull(task.getResult()).toObject(User.class);
                                 ((UserSingleton)(getApplicationContext())).setUser(user);
                             }
                         }
@@ -123,7 +123,6 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void signIn(String email, String password) {
-
         btn_login.setEnabled(false);
         final ProgressDialog progressDialog = new ProgressDialog(LoginActivity.this,
                 R.style.AppTheme_Dark_Dialog);
@@ -143,7 +142,7 @@ public class LoginActivity extends AppCompatActivity {
                                     finish();
                                 }
                                 else{
-                                    toastMessage(task.getException().getMessage());
+                                    toastMessage(Objects.requireNonNull(task.getException()).getMessage());
                                 }
                                 btn_login.setEnabled(true);
                                 progressDialog.dismiss();
@@ -161,7 +160,9 @@ public class LoginActivity extends AppCompatActivity {
     private void executeActivity(Class<?> subActivity){
         FirebaseUser user = mAuth.getCurrentUser();
         Intent intent = new Intent(this,subActivity);
-        intent.putExtra("userId", user.getUid());
+        if (user != null) {
+            intent.putExtra("userId", user.getUid());
+        }
         startActivity(intent);
 
     }
@@ -169,7 +170,6 @@ public class LoginActivity extends AppCompatActivity {
     @Override
     protected void onStart(){
         super.onStart();
-
         FirebaseUser user = mAuth.getCurrentUser();
         if(user != null){
             //user is already connected so we need to redirect him to MainActivity
@@ -178,10 +178,8 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     public boolean isServicesOK(){
-        Log.d(TAG, "isServicesOK: checking google services version");
-
+        //isServicesOK: checking google services version
         int available = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(LoginActivity.this);
-
         if(available == ConnectionResult.SUCCESS){
             //everything is fine and the user can make map requests
             Log.d(TAG, "isServicesOK: Google Play Services is working");
@@ -199,7 +197,6 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void hideSoftKeyboard(){
-
         this.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
     }
 }

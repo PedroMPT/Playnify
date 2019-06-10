@@ -1,6 +1,7 @@
 package pt.ismai.pedro.sisproject.Activities;
 
 import android.animation.ArgbEvaluator;
+import android.annotation.SuppressLint;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.location.Address;
@@ -9,11 +10,9 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.CardView;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
-import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -25,7 +24,6 @@ import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -38,9 +36,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 import pt.ismai.pedro.sisproject.Models.Adapter;
-import pt.ismai.pedro.sisproject.Models.Football;
 import pt.ismai.pedro.sisproject.Models.Game;
 import pt.ismai.pedro.sisproject.Models.TypeOfGame;
 import pt.ismai.pedro.sisproject.Models.User;
@@ -48,7 +46,7 @@ import pt.ismai.pedro.sisproject.R;
 
 public class ScheduleGameActivity extends AppCompatActivity {
 
-    TextView input_name;
+    TextView input_name,date_text,time_text;
     Button saveGame;
     ImageView date, hour;
     LinearDatePickerDialog dialog;
@@ -69,8 +67,6 @@ public class ScheduleGameActivity extends AppCompatActivity {
     List<TypeOfGame> typeOfGames;
     Integer[] colors = null;
     ArgbEvaluator argbEvaluator = new ArgbEvaluator();
-
-
     List<Place.Field> placeFields = Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.ADDRESS);
     AutocompleteSupportFragment placesFragment;
 
@@ -79,17 +75,19 @@ public class ScheduleGameActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_schedule_game);
 
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        Objects.requireNonNull(getSupportActionBar()).setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setDisplayShowHomeEnabled(true);
         getSupportActionBar().setDisplayShowTitleEnabled(false);
 
         mAuth = FirebaseAuth.getInstance();
         mDB = FirebaseFirestore.getInstance();
-        userID = mAuth.getCurrentUser().getUid();
+        userID = Objects.requireNonNull(mAuth.getCurrentUser()).getUid();
         input_name = findViewById(R.id.input_name);
         date = findViewById(R.id.date);
         hour = findViewById(R.id.hour);
         saveGame = findViewById(R.id.saveGame);
+        date_text = findViewById(R.id.date_text);
+        time_text = findViewById(R.id.time_text);
 
         typeOfGames = new ArrayList<>();
         typeOfGames.add(new TypeOfGame(R.drawable.football_img,"Football"));
@@ -103,7 +101,7 @@ public class ScheduleGameActivity extends AppCompatActivity {
         viewPager = findViewById(R.id.viewPager);
         viewPager.setAdapter(adapter);
         viewPager.setPadding(130,0,130,0);
-        Integer[] colors_temp = {
+        colors = new Integer[]{
                 getResources().getColor(R.color.color1),
                 getResources().getColor(R.color.color2),
                 getResources().getColor(R.color.color3),
@@ -111,8 +109,6 @@ public class ScheduleGameActivity extends AppCompatActivity {
                 getResources().getColor(R.color.color5),
                 getResources().getColor(R.color.color6),
         };
-
-        colors = colors_temp;
 
         viewPager.setOnPageChangeListener(new ViewPager.OnPageChangeListener() {
             @Override
@@ -123,17 +119,13 @@ public class ScheduleGameActivity extends AppCompatActivity {
                             .evaluate(v,
                                     colors[i],
                                     colors[i] + 1));
-
-
                 }else{
-
                     viewPager.setBackgroundColor(colors[colors.length - 1]);
                 }
             }
 
             @Override
             public void onPageSelected(int i) {
-
                 valueFortypeOfGame = i;
             }
 
@@ -143,7 +135,6 @@ public class ScheduleGameActivity extends AppCompatActivity {
             }
         });
 
-
         dialog = LinearDatePickerDialog.Builder.with(this)
                 .setYear(2019)
                 .setDialogBackgroundColor(getResources().getColor(R.color.primary_dark))
@@ -151,13 +142,13 @@ public class ScheduleGameActivity extends AppCompatActivity {
                 .setButtonCallback(new LinearDatePickerDialog.ButtonCallback() {
                     @Override
                     public void onPositive(DialogInterface dialog, int year, int month, int day) {
-                        toastMessage("" + year + "" + month + "" + day);
-                        gameDate = day + "-" + month + "-" + year;
-                    }
+                        //toastMessage("" + year + "" + month + "" + day);
 
+                        gameDate = day + "-" + month + "-" + year;
+                        date_text.setText(gameDate);
+                    }
                     @Override
                     public void onNegative(DialogInterface dialog) {
-
                     }
                 })
                 .build();
@@ -166,27 +157,26 @@ public class ScheduleGameActivity extends AppCompatActivity {
                 .setDialogBackgroundColor(getResources().getColor(R.color.primary_dark))
                 .setPickerBackgroundColor(getResources().getColor(R.color.color1))
                 .setButtonCallback(new LinearTimePickerDialog.ButtonCallback() {
+
+            @SuppressLint("DefaultLocale")
             @Override
             public void onPositive(DialogInterface dialog, int hour, int minutes) {
-
-                gameHour = hour + ":" + minutes;
+                gameHour = String.format("%02d:%02d",hour,minutes);
+                time_text.setText(gameHour);
             }
 
             @Override
             public void onNegative(DialogInterface dialog) {
-
             }
         }).build();
 
         date.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
                 dialog.show();
 
             }
         });
-
         hour.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -200,8 +190,7 @@ public class ScheduleGameActivity extends AppCompatActivity {
         saveGame.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                getUserDetails();
-
+                saveGame();
             }
         });
 
@@ -210,95 +199,94 @@ public class ScheduleGameActivity extends AppCompatActivity {
     private void loadUserInfo() {
         FirebaseUser user = mAuth.getCurrentUser();
         if (user != null){
-            String[] names = user.getDisplayName().split(" ");
+            String[] names = Objects.requireNonNull(user.getDisplayName()).split(" ");
             String firstName = names[0];
             input_name.setText("Olá " + firstName + " onde vamos jogar :)");
         }
     }
 
     private void setupPlaceAutoComplete() {
+        placesFragment = (AutocompleteSupportFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.places_autocomplete_fragment);
 
-        placesFragment = (AutocompleteSupportFragment) getSupportFragmentManager().findFragmentById(R.id.places_autocomplete_fragment);
-        placesFragment.setPlaceFields(placeFields);
-        placesFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
-            @Override
-            public void onPlaceSelected(@NonNull Place place) {
-                Geocoder geocoder = new Geocoder(ScheduleGameActivity.this);
-                List<Address> addressList = new ArrayList<>();
+        if (placesFragment != null) {
+            placesFragment.setPlaceFields(placeFields);
+            placesFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
+                @Override
+                public void onPlaceSelected(@NonNull Place place) {
+                    Geocoder geocoder = new Geocoder(ScheduleGameActivity.this);
+                    List<Address> addressList = new ArrayList<>();
 
-                try {
-                    addressList = geocoder.getFromLocationName(place.getName(),1);
-                } catch (IOException e) {
-                    toastMessage( e.getMessage());
+                    try {
+                        addressList = geocoder.getFromLocationName(place.getName(),1);
+                    } catch (IOException e) {
+                        toastMessage( e.getMessage());
+                    }
+
+                    if (addressList.size() > 0){
+                        Address address = addressList.get(0);
+                        geoPoint = new GeoPoint(address.getLatitude(),address.getLongitude());
+                    }
                 }
 
-                if (addressList.size() > 0){
-                    Address address = addressList.get(0);
-
-                    geoPoint = new GeoPoint(address.getLatitude(),address.getLongitude());
+                @Override
+                public void onError(@NonNull Status status) {
+                    toastMessage(status.getStatusMessage());
                 }
-            }
-
-            @Override
-            public void onError(@NonNull Status status) {
-                toastMessage(status.getStatusMessage());
-            }
-        });
+            });
+        }
     }
 
     private void toastMessage(String message) {
-
         Toast.makeText(this,message,Toast.LENGTH_LONG).show();
     }
 
-    private void getUserDetails(){
-
+    private void saveGame(){
         DocumentReference userRef = mDB
                 .collection(getString(R.string.collection_users))
                 .document(userID);
 
-        userRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
-            @Override
-            public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+        if (gameDate != null && gameHour != null && geoPoint != null){
+            userRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+                @Override
+                public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                    if (task.isSuccessful()){
+                        DocumentReference gameRefCollection = mDB.collection(getString(R.string.collection_games)).document();
+                        captain = Objects.requireNonNull(task.getResult()).toObject(User.class);
+                        game = new Game(gameDate,gameHour,captain,geoPoint,valueFortypeOfGame);
+                        game.setGameID(gameRefCollection.getId());
+                        game.setCapacity(game.gamePlayers());
+                        game.addPlayers(captain);
+                        game.setNumberOfPlayers(1);
+                        game.setTimestamp(null);
 
-                if (task.isSuccessful()){
-
-                    DocumentReference gameRefCollection = mDB.collection(getString(R.string.collection_games)).document();
-                    captain = task.getResult().toObject(User.class);
-                    game = new Game(gameDate,gameHour,captain,geoPoint,valueFortypeOfGame);
-                    game.setGameID(gameRefCollection.getId());
-                    game.setCapacity(game.gamePlayers());
-                    game.addPlayers(captain);
-                    game.setNumberOfPlayers(1);
-                    game.setTimestamp(null);
-
-
-                    gameRefCollection.set(game).addOnCompleteListener(new OnCompleteListener<Void>() {
-                        @Override
-                        public void onComplete(@NonNull Task<Void> task) {
-
-                            if (task.isSuccessful()){
-
-                                toastMessage("Game Saved!");
+                        gameRefCollection.set(game).addOnCompleteListener(new OnCompleteListener<Void>() {
+                            @Override
+                            public void onComplete(@NonNull Task<Void> task) {
+                                if (task.isSuccessful()){
+                                    toastMessage("Game Saved!");
+                                }
+                                else{
+                                    toastMessage(Objects.requireNonNull(task.getException()).getMessage());
+                                }
                             }
-
-                            else{
-
-                                toastMessage(task.getException().getMessage());
-                            }
-                        }
-                    });
-
+                        });
+                    }
+                    else toastMessage(Objects.requireNonNull(task.getException()).getMessage());
                 }
-                else toastMessage(task.getException().getMessage());
-            }
-        });
+            });
+        }else{
+            toastMessage("Please check for empty fields: Date, Hour or Place Search");
+        }
+
     }
 
     private void executeActivity(Class<?> subActivity){
         FirebaseUser user = mAuth.getCurrentUser();
         Intent intent = new Intent(this,subActivity);
-        intent.putExtra("objectId", user.getUid());
+        if (user != null) {
+            intent.putExtra("objectId", user.getUid());
+        }
         startActivity(intent);
         finish();
     }

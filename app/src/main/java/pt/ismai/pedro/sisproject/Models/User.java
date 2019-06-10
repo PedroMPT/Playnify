@@ -1,14 +1,16 @@
 package pt.ismai.pedro.sisproject.Models;
 
-import android.os.Parcel;
-import android.os.Parcelable;
-
-public class User implements Parcelable{
+public class User{
 
     private String email;
     private String user_id;
     private String username;
     private String avatar;
+
+
+    public User() {
+
+    }
 
     public User(String email, String user_id, String username, String avatar) {
         this.email = email;
@@ -17,39 +19,12 @@ public class User implements Parcelable{
         this.avatar = avatar;
     }
 
-    public User() {
-
-    }
-
-    protected User(Parcel in) {
-        email = in.readString();
-        user_id = in.readString();
-        username = in.readString();
-        avatar = in.readString();
-    }
-
-    public static final Creator<User> CREATOR = new Creator<User>() {
-        @Override
-        public User createFromParcel(Parcel in) {
-            return new User(in);
-        }
-
-        @Override
-        public User[] newArray(int size) {
-            return new User[size];
-        }
-    };
-
     public String getAvatar() {
         return avatar;
     }
 
     public void setAvatar(String avatar) {
         this.avatar = avatar;
-    }
-
-    public static Creator<User> getCREATOR() {
-        return CREATOR;
     }
 
     public String getEmail() {
@@ -86,16 +61,4 @@ public class User implements Parcelable{
                 '}';
     }
 
-    @Override
-    public int describeContents() {
-        return 0;
-    }
-
-    @Override
-    public void writeToParcel(Parcel dest, int flags) {
-        dest.writeString(email);
-        dest.writeString(user_id);
-        dest.writeString(username);
-        dest.writeString(avatar);
-    }
 }

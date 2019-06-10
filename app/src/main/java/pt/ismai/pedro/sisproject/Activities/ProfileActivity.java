@@ -38,7 +38,6 @@ public class ProfileActivity extends AppCompatActivity {
         profile_edit.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
                 executeActivity(EditProfileActivity.class);
             }
         });
@@ -55,23 +54,18 @@ public class ProfileActivity extends AppCompatActivity {
         btn_sign_out.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
                 mAuth.signOut();
                 Intent loginIntent = new Intent(getApplicationContext(),LoginActivity.class);
                 startActivity(loginIntent);
-
             }
         });
     }
 
     private void loadUserInfo() {
-
         FirebaseUser user = mAuth.getCurrentUser();
-
         if (user != null){
             username.setText(user.getDisplayName());
             if (user.getPhotoUrl() != null){
-
                 Glide.with(this ).load(user.getPhotoUrl().toString()).into(profile_photo);
             }
         }
@@ -80,7 +74,9 @@ public class ProfileActivity extends AppCompatActivity {
     private void executeActivity(Class<?> subActivity){
         FirebaseUser user = mAuth.getCurrentUser();
         Intent intent = new Intent(this,subActivity);
-        intent.putExtra("userId", user.getUid());
+        if (user != null) {
+            intent.putExtra("userId", user.getUid());
+        }
         startActivity(intent);
         finish();
     }

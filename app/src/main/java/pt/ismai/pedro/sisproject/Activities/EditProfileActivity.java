@@ -7,7 +7,6 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -22,8 +21,9 @@ import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 
+import java.util.Objects;
+
 import de.hdodenhof.circleimageview.CircleImageView;
-import pt.ismai.pedro.sisproject.Models.User;
 import pt.ismai.pedro.sisproject.R;
 
 
@@ -40,7 +40,7 @@ public class EditProfileActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_edit_profile);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        Objects.requireNonNull(getSupportActionBar()).setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setDisplayShowHomeEnabled(true);
         getSupportActionBar().setDisplayShowTitleEnabled(false);
 
@@ -55,7 +55,6 @@ public class EditProfileActivity extends AppCompatActivity {
         profile_photo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
                 openGallery();
             }
         });
@@ -63,7 +62,6 @@ public class EditProfileActivity extends AppCompatActivity {
         input_name.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
                 executeActivity(EditNameActivity.class);
             }
         });
@@ -86,12 +84,10 @@ public class EditProfileActivity extends AppCompatActivity {
     private void loadUserInfo() {
 
         FirebaseUser user = mAuth.getCurrentUser();
-
         if (user != null){
             input_name.setText(user.getDisplayName());
             input_email.setText(user.getEmail());
             if (user.getPhotoUrl() != null){
-
                 Glide.with(this ).load(user.getPhotoUrl().toString()).into(profile_photo);
             }
         }
@@ -101,7 +97,7 @@ public class EditProfileActivity extends AppCompatActivity {
 
         // First we need to upload user photo to firebase storage and get uri
         StorageReference mStorage = FirebaseStorage.getInstance().getReference().child("users_photos");
-        final StorageReference imageFilePath = mStorage.child(pickedImage.getLastPathSegment());
+        final StorageReference imageFilePath = mStorage.child(Objects.requireNonNull(pickedImage.getLastPathSegment()));
         imageFilePath.putFile(pickedImage).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
             @Override
             public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
@@ -121,7 +117,6 @@ public class EditProfileActivity extends AppCompatActivity {
                             @Override
                             public void onComplete(@NonNull Task<Void> task) {
                                 if(task.isSuccessful()){
-
                                     // user info updated successfully
                                     toastMessage("PhotoUpdated");
                                 }
@@ -131,9 +126,6 @@ public class EditProfileActivity extends AppCompatActivity {
                 });
             }
         });
-
-
-
     }
 
     @Override
@@ -141,7 +133,6 @@ public class EditProfileActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
 
         if(resultCode == RESULT_OK && requestCode == REQUESTCODE && data != null){
-
             //the user has successfully picked an image
             // we need to save it's reference to a Uri variable
             pickedImage = data.getData();
@@ -154,7 +145,6 @@ public class EditProfileActivity extends AppCompatActivity {
     }
 
     private void openGallery() {
-
         //TODO: open gallery intent and wait for user to pick an image
         Intent galleryIntent = new Intent(Intent.ACTION_GET_CONTENT);
         galleryIntent.setType("image/*");
@@ -169,7 +159,9 @@ public class EditProfileActivity extends AppCompatActivity {
     private void executeActivity(Class<?> subActivity){
         FirebaseUser user = mAuth.getCurrentUser();
         Intent intent = new Intent(this,subActivity);
-        intent.putExtra("objectId", user.getUid());
+        if (user != null) {
+            intent.putExtra("objectId", user.getUid());
+        }
         startActivity(intent);
         finish();
     }

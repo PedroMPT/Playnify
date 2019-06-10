@@ -1,8 +1,6 @@
 package pt.ismai.pedro.sisproject.Activities;
 
 import android.Manifest;
-import android.app.AlertDialog;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Address;
@@ -12,7 +10,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.annotation.NonNull;
-import android.support.design.widget.BottomSheetBehavior;
 import android.support.design.widget.BottomSheetDialog;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
@@ -53,10 +50,7 @@ import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.GeoPoint;
-import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QuerySnapshot;
-import com.google.firebase.firestore.model.DocumentCollections;
 import com.google.maps.DirectionsApiRequest;
 import com.google.maps.GeoApiContext;
 import com.google.maps.PendingResult;
@@ -65,21 +59,17 @@ import com.google.maps.internal.PolylineEncoding;
 import com.google.maps.model.DirectionsResult;
 import com.google.maps.model.DirectionsRoute;
 
-import org.w3c.dom.Text;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 import pt.ismai.pedro.sisproject.Models.ClusterMarker;
-import pt.ismai.pedro.sisproject.Models.Football;
 import pt.ismai.pedro.sisproject.Models.Game;
-import pt.ismai.pedro.sisproject.Models.GameLocation;
 import pt.ismai.pedro.sisproject.Models.PolylineData;
 import pt.ismai.pedro.sisproject.Models.User;
-import pt.ismai.pedro.sisproject.Models.UserSingleton;
 import pt.ismai.pedro.sisproject.R;
 import pt.ismai.pedro.sisproject.util.MyClusterManagerRenderer;
 
@@ -101,8 +91,10 @@ public class MainActivity extends AppCompatActivity
     AutocompleteSupportFragment placesFragment;
     private FusedLocationProviderClient fusedLocationProviderClient;
     FloatingActionButton locationButton;
-    CircleImageView profile_photo;
+    CircleImageView profile_photo,profile;
     ImageButton btn_reset;
+    TextView username,capacity,playersLeft,date,time;
+    Button btn_directions,btn_reserve_spot;
     private FirebaseAuth mAuth;
     private FirebaseFirestore mDB;
     private ArrayList<Game> games = new ArrayList<>();
@@ -127,13 +119,21 @@ public class MainActivity extends AppCompatActivity
         bottomSheetDialogView = getLayoutInflater().inflate(R.layout.fragment_bottom_sheet,null);
         bottomSheetDialog.setContentView(bottomSheetDialogView);
 
-
         locationButton = findViewById(R.id.ic_gps);
         profile_photo = findViewById(R.id.profilePhoto);
         btn_reset = findViewById(R.id.btn_reset_map);
+        username = bottomSheetDialogView.findViewById(R.id.username);
+        capacity = bottomSheetDialogView.findViewById(R.id.capacity);
+        playersLeft = bottomSheetDialogView.findViewById(R.id.playersLeft);
+        date = bottomSheetDialogView.findViewById(R.id.date);
+        time = bottomSheetDialogView.findViewById(R.id.time);
+        btn_directions = bottomSheetDialogView.findViewById(R.id.btn_directions);
+        btn_reserve_spot = bottomSheetDialogView.findViewById(R.id.btn_enter_game);
+        profile = bottomSheetDialog.findViewById(R.id.profilePhoto_BottomSheet);
+
         mAuth = FirebaseAuth.getInstance();
         mDB = FirebaseFirestore.getInstance();
-        userID = mAuth.getCurrentUser().getUid();
+        userID = Objects.requireNonNull(mAuth.getCurrentUser()).getUid();
         getLocationPermission();
         loadUserInfo();
         getGamesLocation();
@@ -141,7 +141,6 @@ public class MainActivity extends AppCompatActivity
         profile_photo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
                 executeActivity(ProfileActivity.class);
             }
         });
@@ -149,7 +148,6 @@ public class MainActivity extends AppCompatActivity
         locationButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
                 getDevicelocation();
             }
         });
@@ -174,7 +172,6 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-
     @Override
     public void onMapReady(GoogleMap googleMap) {
         if (mLocationPermissionGranted) {
@@ -189,6 +186,7 @@ public class MainActivity extends AppCompatActivity
             myMap = googleMap;
             myMap.setMyLocationEnabled(true);
             myMap.getUiSettings().setMyLocationButtonEnabled(false);
+            addMapMarkers();
             initPlaces();
             setupPlaceAutoComplete();
             myMap.setOnInfoWindowClickListener(this);
@@ -199,40 +197,41 @@ public class MainActivity extends AppCompatActivity
     private void setupPlaceAutoComplete() {
 
         placesFragment = (AutocompleteSupportFragment) getSupportFragmentManager().findFragmentById(R.id.places_autocomplete_fragment);
-        placesFragment.setPlaceFields(placeFields);
-        placesFragment.setCountry("pt");
-        placesFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
-            @Override
-            public void onPlaceSelected(@NonNull Place place) {
-                Geocoder geocoder = new Geocoder(MainActivity.this);
-                List<Address> addressList = new ArrayList<>();
+        if (placesFragment != null) {
+            placesFragment.setPlaceFields(placeFields);
 
-                try {
-                    addressList = geocoder.getFromLocationName(place.getName(),1);
-                } catch (IOException e) {
-                    toastMessage( e.getMessage());
+            placesFragment.setCountry("PT");
+            placesFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
+                @Override
+                public void onPlaceSelected(@NonNull Place place) {
+                    Geocoder geocoder = new Geocoder(MainActivity.this);
+                    List<Address> addressList = new ArrayList<>();
+
+                    try {
+                        addressList = geocoder.getFromLocationName(place.getName(),1);
+                    } catch (IOException e) {
+                        toastMessage( e.getMessage());
+                    }
+
+                    if (addressList.size() > 0){
+                        Address address = addressList.get(0);
+                        moveCamera( new LatLng(address.getLatitude(),address.getLongitude()),DEFAULT_ZOOM,address.getAddressLine(0));
+                    }
                 }
 
-                if (addressList.size() > 0){
-                    Address address = addressList.get(0);
-                    moveCamera( new LatLng(address.getLatitude(),address.getLongitude()),DEFAULT_ZOOM,address.getAddressLine(0));
+                @Override
+                public void onError(@NonNull Status status) {
+                    toastMessage(status.getStatusMessage());
                 }
-            }
-
-            @Override
-            public void onError(@NonNull Status status) {
-                toastMessage(status.getStatusMessage());
-            }
-        });
+            });
+        }
     }
 
     private void initPlaces() {
-
         if (!Places.isInitialized()) {
             Places.initialize(getApplicationContext(), getString(R.string.google_maps_api_key));
         }
         placesClient = Places.createClient(this);
-
     }
 
     private void getDevicelocation(){
@@ -246,16 +245,19 @@ public class MainActivity extends AppCompatActivity
                     public void onComplete(@NonNull Task task) {
                         if (task.isSuccessful()){
                             Location currentLocation = (Location) task.getResult();
-                            mLocation = new LatLng(currentLocation.getLatitude(),currentLocation.getLongitude());
-                            moveCamera(new LatLng(currentLocation.getLatitude(),
-                                    currentLocation.getLongitude()),DEFAULT_ZOOM,"My Location");
-                            addMapMarkers();
+                            if (currentLocation != null) {
+                                mLocation = new LatLng(currentLocation.getLatitude(),
+                                        currentLocation.getLongitude());
+                                moveCamera(new LatLng(currentLocation.getLatitude(),
+                                        currentLocation.getLongitude()),
+                                        DEFAULT_ZOOM,"My Location");
+                                addMapMarkers();
+                            }
                         }else{
                             toastMessage("Unable to get current location");
                         }
                     }
                 });
-
             }
 
         }catch (SecurityException e){
@@ -264,22 +266,21 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void moveCamera(LatLng latLng, float zoom, String title){
-
         myMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng,zoom));
         if (!title.equals("My Location")){
             MarkerOptions markerOptions = new MarkerOptions().position(latLng).title(title);
             myMap.addMarker(markerOptions);
+            hideSoftKeyboard();
         }
-        hideSoftKeyboard();
     }
 
     private void initMap(){
 
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
-        mapFragment.getMapAsync(MainActivity.this);
-
+        if (mapFragment != null) {
+            mapFragment.getMapAsync(MainActivity.this);
+        }
         if (mGeoAPIContext == null){
-
             mGeoAPIContext = new GeoApiContext
                     .Builder().
                     apiKey(getString(R.string.google_directions_api_key))
@@ -294,13 +295,13 @@ public class MainActivity extends AppCompatActivity
 
                 if (mPolylinesData.size() > 0){
                     for (PolylineData polylineData : mPolylinesData){
-
                         polylineData.getPolyline().remove();
                     }
                     mPolylinesData.clear();
                     mPolylinesData = new ArrayList<>();
                 }
                 double duration = 9999999;
+
                 for(DirectionsRoute route: result.routes){
                     List<com.google.maps.model.LatLng> decodedPath = PolylineEncoding
                             .decode(route.overviewPolyline
@@ -315,8 +316,9 @@ public class MainActivity extends AppCompatActivity
                                 latLng.lng
                         ));
                     }
+
                     Polyline polyline = myMap.addPolyline(new PolylineOptions().addAll(newDecodedPath));
-                    polyline.setColor(ContextCompat.getColor(getApplicationContext(), R.color.primary_dark));
+                    polyline.setColor(ContextCompat.getColor(getApplicationContext(), R.color.aluminum));
                     polyline.setClickable(true);
                     mPolylinesData.add(new PolylineData(polyline,route.legs[0]));
 
@@ -327,7 +329,6 @@ public class MainActivity extends AppCompatActivity
                         onPolylineClick(polyline);
                         zoomRoute(polyline.getPoints());
                     }
-
                 }
             }
         });
@@ -339,28 +340,26 @@ public class MainActivity extends AppCompatActivity
                 marker.getPosition().latitude,
                 marker.getPosition().longitude
         );
-        DirectionsApiRequest directions = new DirectionsApiRequest(mGeoAPIContext);
 
+        DirectionsApiRequest directions = new DirectionsApiRequest(mGeoAPIContext);
         directions.alternatives(true);
         directions.origin(
                 new com.google.maps.model.LatLng(
                         mLocation.latitude, mLocation.longitude
                 )
         );
+
         directions.destination(destination).setCallback(new PendingResult.Callback<DirectionsResult>() {
             @Override
             public void onResult(DirectionsResult result) {
-
                 Log.d("ActivityTeste", "OnResult: routes: " + result.routes[0].toString());
                 Log.d("ActivityTeste", "OnResult: geocodeWayPoints: " + result.geocodedWaypoints[0].toString());
-               addPolylinesToMap(result);
+                addPolylinesToMap(result);
             }
 
             @Override
             public void onFailure(Throwable e) {
-
                 Log.d("Failed",e.getMessage());
-
             }
         });
     }
@@ -370,23 +369,17 @@ public class MainActivity extends AppCompatActivity
         String[] permissions = {Manifest.permission.ACCESS_FINE_LOCATION,
                 Manifest.permission.ACCESS_COARSE_LOCATION};
 
-        // Improve this if Statement
+        //Check if this if statement is ok
         if (ContextCompat.checkSelfPermission(this.getApplicationContext(),
                 FINE_LOCATION)
-                == PackageManager.PERMISSION_GRANTED){
+                == PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(this.getApplicationContext(),
+                COARSE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED ){
 
-            if (ContextCompat.checkSelfPermission(this.getApplicationContext(),
-                    COARSE_LOCATION)
-                    == PackageManager.PERMISSION_GRANTED){
-                mLocationPermissionGranted = true;
-                initMap();
-                addMapMarkers();
-
-            }else{
-                ActivityCompat.requestPermissions(this,
-                        permissions,
-                        PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
-            }
+            mLocationPermissionGranted = true;
+            initMap();
+            addMapMarkers();
         }
         else{
             ActivityCompat.requestPermissions(this,
@@ -403,9 +396,8 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void onComplete(@NonNull Task<QuerySnapshot> task) {
                 if (task.isSuccessful()){
-
-                    for(DocumentSnapshot document:task.getResult()){
-                        Game game = document.toObject(Football.class);
+                    for(DocumentSnapshot document: Objects.requireNonNull(task.getResult())){
+                        Game game = document.toObject(Game.class);
                         games.add(game);
                     }
                 }
@@ -416,7 +408,6 @@ public class MainActivity extends AppCompatActivity
     private void addMapMarkers(){
 
         if(myMap != null){
-
             resetMap();
             if (mClusterManager == null){
                 mClusterManager = new ClusterManager<ClusterMarker>(getApplicationContext(),myMap);
@@ -429,7 +420,6 @@ public class MainActivity extends AppCompatActivity
                 );
                 mClusterManager.setRenderer(mClusterManagerRenderer);
             }
-
             for (Game game : games){
                 try{
                     String snippet = "";
@@ -463,13 +453,13 @@ public class MainActivity extends AppCompatActivity
                         default:
                             break;
                     }
-
                     ClusterMarker myNewClusterMarker = new ClusterMarker(
                             new LatLng(game.getGeoPoint().getLatitude(),game.getGeoPoint().getLongitude()),
                             game.getCaptain().getUsername(),
                             snippet,
                             avatar
                     );
+
                     mClusterManager.addItem(myNewClusterMarker);
                     mClusterMarkers.add(myNewClusterMarker);
 
@@ -482,9 +472,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void removeTripMarkers(){
-
         for (Marker marker : mTripMarkers){
-
             marker.remove();
         }
     }
@@ -536,7 +524,6 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-
         mLocationPermissionGranted = false;
         switch (requestCode) {
             case PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION: {
@@ -558,55 +545,26 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void hideSoftKeyboard(){
-
         this.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
     }
 
     private void executeActivity(Class<?> subActivity){
         FirebaseUser user = mAuth.getCurrentUser();
         Intent intent = new Intent(this,subActivity);
-        intent.putExtra("userId", user.getUid());
+        if (user != null) {
+            intent.putExtra("userId", user.getUid());
+        }
         startActivity(intent);
 
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-        toastMessage("OnResume");
-        if(mLocationPermissionGranted){
-            getGamesLocation();
-            addMapMarkers();
-        }
-        else{
-            getLocationPermission();
-        }
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-    }
-
-    @Override
     public void onInfoWindowClick(final Marker marker) {
-
-        TextView username = bottomSheetDialogView.findViewById(R.id.username);
-        TextView capacity = bottomSheetDialogView.findViewById(R.id.capacity);
-        TextView playersLeft = bottomSheetDialogView.findViewById(R.id.playersLeft);
-        TextView date = bottomSheetDialogView.findViewById(R.id.date);
-        TextView time = bottomSheetDialogView.findViewById(R.id.time);
-        Button btn_directions = bottomSheetDialogView.findViewById(R.id.btn_directions);
-        Button btn_reserve_spot = bottomSheetDialogView.findViewById(R.id.btn_enter_game);
-        CircleImageView profile = bottomSheetDialog.findViewById(R.id.profilePhoto);
-
-
         com.google.maps.model.LatLng destination = new com.google.maps.model.LatLng(
                 marker.getPosition().latitude,
                 marker.getPosition().longitude
         );
         for (Game game : games){
-
             if (game.getGeoPoint().getLatitude() == destination.lat
                     && game.getGeoPoint().getLongitude() == destination.lng){
 
@@ -617,13 +575,7 @@ public class MainActivity extends AppCompatActivity
                 playersLeft.setText(String.valueOf(playersLeftToGame));
                 date.setText(game.getGameDate());
                 time.setText(game.getHour());
-
-                FirebaseUser user = mAuth.getCurrentUser();
-
-                if (game.getCaptain().getUser_id().equals(user.getUid())){
-
-                    Glide.with(this ).load(user.getPhotoUrl().toString()).into(profile);
-                }
+                Glide.with(this ).load(game.getCaptain().getAvatar()).into(profile);
             }
 
             btn_directions.setOnClickListener(new View.OnClickListener() {
@@ -633,26 +585,22 @@ public class MainActivity extends AppCompatActivity
                     mSelectedMarker = marker;
                     calculateDirections(marker);
                     bottomSheetDialog.hide();
-
                 }
             });
-
 
             btn_reserve_spot.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    DocumentReference userRef = mDB.collection(getString(R.string.collection_users)).document(mAuth.getUid());
 
+                    DocumentReference userRef = mDB.collection(getString(R.string.collection_users)).document(Objects.requireNonNull(mAuth.getUid()));
                     userRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
                         @Override
                         public void onComplete(@NonNull Task<DocumentSnapshot> task) {
-
                             if (task.isSuccessful()){
-                                User user = task.getResult().toObject(User.class);
-
-                                if (game.getNumberOfPlayers() < game.getCapacity()){
+                                User user = Objects.requireNonNull(task.getResult()).toObject(User.class);
+                                if (game.getNumberOfPlayers() < game.getCapacity()
+                                        && !game.getCaptain().getUser_id().equals(mAuth.getCurrentUser().getUid())){
                                     game.addPlayers(user);
-
 
                                     DocumentReference gameRef = mDB.
                                             collection(getString(R.string.collection_games)).document(game.getGameID());
@@ -662,16 +610,16 @@ public class MainActivity extends AppCompatActivity
                                         @Override
                                         public void onComplete(@NonNull Task<Void> task) {
                                             if (task.isSuccessful()){
-
                                                 toastMessage("Welcome to the game :)");
                                             }
-
                                             else{
-
                                                 toastMessage("Sorry, game is full :(");
                                             }
                                         }
                                     });
+                                }
+                                else {
+                                    toastMessage("Is the game full or you want to play in two positions at the same time? :P ");
                                 }
                             }
                         }
@@ -699,7 +647,6 @@ public class MainActivity extends AppCompatActivity
                 .title("Trip: 0" + index).snippet("Duration: " + polylineData.getLeg().duration));
 
                 marker.showInfoWindow();
-
                 mTripMarkers.add(marker);
             }
             else{
@@ -708,6 +655,24 @@ public class MainActivity extends AppCompatActivity
             }
         }
 
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if(mLocationPermissionGranted){
+            loadUserInfo();
+            getGamesLocation();
+            addMapMarkers();
+        }
+        else{
+            getLocationPermission();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
     }
 
 }

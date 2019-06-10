@@ -1,9 +1,9 @@
 package pt.ismai.pedro.sisproject.Activities;
 
 import android.content.Intent;
+import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -13,7 +13,8 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.auth.UserProfileChangeRequest;
+
+import java.util.Objects;
 
 import pt.ismai.pedro.sisproject.R;
 
@@ -22,13 +23,13 @@ public class EditPasswordActivity extends AppCompatActivity {
     EditText input_password;
     Button btn_edit;
     private FirebaseAuth mAuth;
-
+    FirebaseUser user;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_edit_password);
-        getSupportActionBar().setTitle("EDIT PASSWORD");
+        Objects.requireNonNull(getSupportActionBar()).setTitle("EDIT PASSWORD");
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setDisplayShowHomeEnabled(true);
 
@@ -45,21 +46,26 @@ public class EditPasswordActivity extends AppCompatActivity {
     }
 
     private void updatePassword(){
-
         String newPassword = input_password.getText().toString();
-        FirebaseUser user = mAuth.getCurrentUser();
-        user.updatePassword(newPassword)
-                .addOnCompleteListener(new OnCompleteListener<Void>() {
-                    @Override
-                    public void onComplete(@NonNull Task<Void> task) {
-                        if (task.isSuccessful()) {
-                            toastMessage("User password updated.");
+        user = mAuth.getCurrentUser();
+        if (user != null && !newPassword.equals("")) {
+            user.updatePassword(newPassword)
+                    .addOnCompleteListener(new OnCompleteListener<Void>() {
+                        @Override
+                        public void onComplete(@NonNull Task<Void> task) {
+                            if (task.isSuccessful()) {
+                                toastMessage("User password updated.");
+                            }
+                            else {
+                                toastMessage(Objects.requireNonNull(task.getException()).getMessage());
+                            }
+                            executeActivity(EditProfileActivity.class);
                         }
-
-                        executeActivity(EditProfileActivity.class);
-                    }
-                });
-
+                    });
+        }
+        else {
+            toastMessage("Password field required");
+        }
     }
 
     private void toastMessage(String message) {
@@ -69,7 +75,9 @@ public class EditPasswordActivity extends AppCompatActivity {
     private void executeActivity(Class<?> subActivity){
         FirebaseUser user = mAuth.getCurrentUser();
         Intent intent = new Intent(this,subActivity);
-        intent.putExtra("ouserId", user.getUid());
+        if (user != null) {
+            intent.putExtra("ouserId", user.getUid());
+        }
         startActivity(intent);
         finish();
     }

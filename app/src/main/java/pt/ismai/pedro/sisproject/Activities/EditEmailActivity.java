@@ -1,9 +1,9 @@
 package pt.ismai.pedro.sisproject.Activities;
 
 import android.content.Intent;
+import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -13,7 +13,8 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.auth.UserProfileChangeRequest;
+
+import java.util.Objects;
 
 import pt.ismai.pedro.sisproject.R;
 
@@ -28,7 +29,7 @@ public class EditEmailActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_edit_email);
-        getSupportActionBar().setTitle("EDIT EMAIL");
+        Objects.requireNonNull(getSupportActionBar()).setTitle("EDIT EMAIL");
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setDisplayShowHomeEnabled(true);
 
@@ -46,22 +47,26 @@ public class EditEmailActivity extends AppCompatActivity {
     }
 
     private void updateEmail(){
-
         String email = input_email.getText().toString();
-
-        FirebaseUser user = mAuth.getCurrentUser();
-        user.updateEmail(email)
-                .addOnCompleteListener(new OnCompleteListener<Void>() {
-                    @Override
-                    public void onComplete(@NonNull Task<Void> task) {
-                        if (task.isSuccessful()) {
-                           toastMessage("User email address updated.");
+        user = mAuth.getCurrentUser();
+        if (user != null && !email.equals("")) {
+            user.updateEmail(email)
+                    .addOnCompleteListener(new OnCompleteListener<Void>() {
+                        @Override
+                        public void onComplete(@NonNull Task<Void> task) {
+                            if (task.isSuccessful()) {
+                                toastMessage("User email address updated.");
+                            }
+                            else{
+                                toastMessage(Objects.requireNonNull(task.getException()).getMessage());
+                            }
+                            executeActivity(EditProfileActivity.class);
                         }
-
-                        executeActivity(EditProfileActivity.class);
-                    }
-                });
-
+                    });
+        }
+        else {
+            toastMessage("Email field required");
+        }
 
     }
 
@@ -72,7 +77,9 @@ public class EditEmailActivity extends AppCompatActivity {
     private void executeActivity(Class<?> subActivity){
         FirebaseUser user = mAuth.getCurrentUser();
         Intent intent = new Intent(this,subActivity);
-        intent.putExtra("userId", user.getUid());
+        if (user != null) {
+            intent.putExtra("userId", user.getUid());
+        }
         startActivity(intent);
         finish();
     }
