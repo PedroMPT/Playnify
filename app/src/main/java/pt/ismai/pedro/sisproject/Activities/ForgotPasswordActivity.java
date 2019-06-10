@@ -36,6 +36,7 @@ public class ForgotPasswordActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
 
+                //Create a process dialog to give the user acknowledgement that we're trying to reset his password
                 final ProgressDialog progressDialog = new ProgressDialog(ForgotPasswordActivity.this,
                         R.style.AppTheme_Dark_Dialog);
                 progressDialog.setIndeterminate(true);
@@ -43,6 +44,8 @@ public class ForgotPasswordActivity extends AppCompatActivity {
                 progressDialog.show();
                 String email = input_email.getText().toString();
 
+                //Firebase give us the possibility to send a reset password request to the authenticated email
+                //We can reset our password with a specific link
                 mAuth.sendPasswordResetEmail(email).addOnCompleteListener(new OnCompleteListener<Void>() {
                     @Override
                     public void onComplete(final @NonNull Task<Void> task) {

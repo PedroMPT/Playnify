@@ -54,7 +54,9 @@ public class ProfileActivity extends AppCompatActivity {
         btn_sign_out.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                //Destroying the current authenticated user token
                 mAuth.signOut();
+                //Redirect user to the login activity
                 Intent loginIntent = new Intent(getApplicationContext(),LoginActivity.class);
                 startActivity(loginIntent);
             }
@@ -62,6 +64,9 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     private void loadUserInfo() {
+        //We're getting the authenticated user name and profile photo and setting in the activity
+        //For loading the image we use a library call "Glide"
+        //Glide is a fast and efficient open source media management and image loading framework for Android
         FirebaseUser user = mAuth.getCurrentUser();
         if (user != null){
             username.setText(user.getDisplayName());

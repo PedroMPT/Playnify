@@ -40,6 +40,8 @@ public class EditProfileActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_edit_profile);
+
+        //Set action bar e title
         Objects.requireNonNull(getSupportActionBar()).setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setDisplayShowHomeEnabled(true);
         getSupportActionBar().setDisplayShowTitleEnabled(false);
@@ -83,6 +85,9 @@ public class EditProfileActivity extends AppCompatActivity {
 
     private void loadUserInfo() {
 
+        //We're getting the authenticated user name and profile photo and setting in the activity
+        //For loading the image we use a library call "Glide"
+        //Glide is a fast and efficient open source media management and image loading framework for Android
         FirebaseUser user = mAuth.getCurrentUser();
         if (user != null){
             input_name.setText(user.getDisplayName());
@@ -168,6 +173,7 @@ public class EditProfileActivity extends AppCompatActivity {
 
     @Override
     public boolean onSupportNavigateUp() {
+        // Action bar back button
         onBackPressed();
         executeActivity(ProfileActivity.class);
         return true;

@@ -29,6 +29,7 @@ public class EditPasswordActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_edit_password);
+        //Set action bar e title
         Objects.requireNonNull(getSupportActionBar()).setTitle("EDIT PASSWORD");
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setDisplayShowHomeEnabled(true);
@@ -46,9 +47,11 @@ public class EditPasswordActivity extends AppCompatActivity {
     }
 
     private void updatePassword(){
+        //Method for password updating using firebase
         String newPassword = input_password.getText().toString();
         user = mAuth.getCurrentUser();
         if (user != null && !newPassword.equals("")) {
+            // after the correct validations we update the password on the background using firebase async task
             user.updatePassword(newPassword)
                     .addOnCompleteListener(new OnCompleteListener<Void>() {
                         @Override
@@ -84,6 +87,7 @@ public class EditPasswordActivity extends AppCompatActivity {
 
     @Override
     public boolean onSupportNavigateUp() {
+        // Action bar back button
         onBackPressed();
         executeActivity(EditProfileActivity.class);
         return true;

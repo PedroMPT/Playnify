@@ -63,6 +63,7 @@ public class LoginActivity extends AppCompatActivity {
                 String email = input_email.getText().toString();
                 String password = input_password.getText().toString();
 
+                // Validating the google services version and catching the empty forms
                 if(isServicesOK()){
                     if(!email.equals("") && !password.equals("")){
                         signIn(email,password);
@@ -101,16 +102,22 @@ public class LoginActivity extends AppCompatActivity {
                 FirebaseUser user = mAuth.getCurrentUser();
                 if(user != null){
 
+                    //First we set up the Firebase Firestore database
                     FirebaseFirestore db = FirebaseFirestore.getInstance();
                     FirebaseFirestoreSettings settings = new FirebaseFirestoreSettings.Builder().build();
                     db.setFirestoreSettings(settings);
+
+                    //Then we get a firebase document reference for user collection with the specific document to the authenticated user
+                    //Firestore Database tree schema:
+                    //Collections -> Documents -> Fields
                     DocumentReference userRef = db.collection(getString(R.string.collection_users)).document(Objects.requireNonNull(mAuth.getUid()));
 
+                    //Lastly the information for that specific user is retrieved and we get the results to our User class
+                    // and create a singleton object for that user
                     userRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
                         @Override
                         public void onComplete(@NonNull Task<DocumentSnapshot> task) {
                             if (task.isSuccessful()){
-                                //Objects.requiredNonNull
                                 User user = Objects.requireNonNull(task.getResult()).toObject(User.class);
                                 ((UserSingleton)(getApplicationContext())).setUser(user);
                             }
@@ -123,6 +130,7 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void signIn(String email, String password) {
+        //Create a process dialog to give the user acknowledgement that a login request is initiate
         btn_login.setEnabled(false);
         final ProgressDialog progressDialog = new ProgressDialog(LoginActivity.this,
                 R.style.AppTheme_Dark_Dialog);
@@ -130,6 +138,7 @@ public class LoginActivity extends AppCompatActivity {
         progressDialog.setMessage("Authenticating...");
         progressDialog.show();
 
+        //Using the Firebase authentication method to sign the user to the app
         mAuth.signInWithEmailAndPassword(email,password).addOnCompleteListener(new OnCompleteListener<AuthResult>() {
             @Override
             public void onComplete(final @NonNull Task<AuthResult> task) {

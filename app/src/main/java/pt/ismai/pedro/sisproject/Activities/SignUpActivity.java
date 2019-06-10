@@ -111,6 +111,7 @@ public class SignUpActivity extends AppCompatActivity {
     }
 
     private void CreateUserAccount(final String email, final String name, String pass) {
+        //Create a process dialog to give the user acknowledgement that a signup request is initiate
         btn_signup.setEnabled(false);
         final ProgressDialog progressDialog = new ProgressDialog(SignUpActivity.this,
                 R.style.AppTheme_Dark_Dialog);
@@ -126,23 +127,28 @@ public class SignUpActivity extends AppCompatActivity {
                         new Runnable() {
                             public void run() {
                                 if (task.isSuccessful()) {
+                                    // Create a new user instance and set the details
                                     User user = new User();
                                     user.setUsername(name);
                                     user.setEmail(email);
                                     user.setUser_id(mAuth.getUid());
 
+                                    //Set up the Firebase Firestore database
                                     FirebaseFirestoreSettings settings = new FirebaseFirestoreSettings.Builder()
                                             .build();
                                     mDB.setFirestoreSettings(settings);
 
+                                    //Firebase document reference for user collection with the specific document to the authenticated user
                                     DocumentReference newUserRef = mDB
                                             .collection(getString(R.string.collection_users))
                                             .document(Objects.requireNonNull(mAuth.getUid()));
 
+                                    //Set the specific user details to the firestore user collection
                                     newUserRef.set(user).addOnCompleteListener(new OnCompleteListener<Void>() {
                                         @Override
                                         public void onComplete(@NonNull Task<Void> task) {
                                             if (task.isSuccessful()) {
+                                                //Call the update method to save the profile_photo
                                                 updateUserInfo(name, pickedImage, mAuth.getCurrentUser());
 
                                             } else {
@@ -163,8 +169,8 @@ public class SignUpActivity extends AppCompatActivity {
         });
     }
 
-    //update user photo and name method
     private void updateUserInfo(final String name, Uri pickedImage, final FirebaseUser currentUser) {
+        //update user photo and name method
         if (pickedImage != null){
             // First we need to upload user photo to firebase storage and get uri
             StorageReference mStorage = FirebaseStorage.getInstance().getReference().child("users_photos");
@@ -187,6 +193,7 @@ public class SignUpActivity extends AppCompatActivity {
                                 @Override
                                 public void onComplete(@NonNull Task<Void> task) {
                                     if(task.isSuccessful()){
+                                        // Updating the avatar field with the image url
                                         mDB.collection("Users").document(currentUser
                                                 .getUid()).update("avatar",currentUser.getPhotoUrl().toString());
                                         // user info updated successfully
@@ -226,12 +233,17 @@ public class SignUpActivity extends AppCompatActivity {
     }
 
     private void checkAndRequestForPermissions() {
+        //Getting user permissions to access the photo gallery
+        //if the dialog is displayed for the first time, there is no Never ask again checkbox
+        //If the user denies the permission request, there will be a Never ask again checkbox
+        // in the permission dialog the second time permission is requested.
         if(ContextCompat.checkSelfPermission(SignUpActivity.this, Manifest.permission.READ_EXTERNAL_STORAGE)
                 != PackageManager.PERMISSION_GRANTED){
             if(ActivityCompat.shouldShowRequestPermissionRationale(SignUpActivity.this, Manifest.permission.READ_EXTERNAL_STORAGE)){
                 toastMessage("Please accept for required permission");
             }
             else{
+                //Permission is granted
                 ActivityCompat.requestPermissions(SignUpActivity.this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, PReqCode );
             }
         }

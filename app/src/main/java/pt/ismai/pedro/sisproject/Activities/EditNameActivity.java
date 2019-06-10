@@ -29,10 +29,13 @@ public class EditNameActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_edit_name);
+
+        //Set action bar e title
         Objects.requireNonNull(getSupportActionBar()).setTitle("EDIT NAME");
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setDisplayShowHomeEnabled(true);
-        setContentView(R.layout.activity_edit_name);
+
         mAuth = FirebaseAuth.getInstance();
         input_name = findViewById(R.id.input_name);
         btn_edit = findViewById(R.id.btn_edit);
@@ -47,7 +50,7 @@ public class EditNameActivity extends AppCompatActivity {
     }
 
     private void updateName(){
-
+        //Method for name updating using firebase
         String name = input_name.getText().toString();
         user = mAuth.getCurrentUser();
         UserProfileChangeRequest profileUpdates = new UserProfileChangeRequest.Builder()
@@ -55,6 +58,7 @@ public class EditNameActivity extends AppCompatActivity {
                 .build();
 
         if (user != null && !name.equals("")) {
+            // after the correct validations we update the email on the background using firebase async task
             user.updateProfile(profileUpdates).addOnCompleteListener(new OnCompleteListener<Void>() {
                 @Override
                 public void onComplete(@NonNull Task<Void> task) {
@@ -90,6 +94,7 @@ public class EditNameActivity extends AppCompatActivity {
 
     @Override
     public boolean onSupportNavigateUp() {
+        // Action bar back button
         onBackPressed();
         executeActivity(EditProfileActivity.class);
         return true;

@@ -29,6 +29,7 @@ public class EditEmailActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_edit_email);
+        //Set action bar e title
         Objects.requireNonNull(getSupportActionBar()).setTitle("EDIT EMAIL");
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setDisplayShowHomeEnabled(true);
@@ -47,9 +48,11 @@ public class EditEmailActivity extends AppCompatActivity {
     }
 
     private void updateEmail(){
+        //Method for email updating using firebase
         String email = input_email.getText().toString();
         user = mAuth.getCurrentUser();
         if (user != null && !email.equals("")) {
+            // after the correct validations we update the email on the background using firebase async task
             user.updateEmail(email)
                     .addOnCompleteListener(new OnCompleteListener<Void>() {
                         @Override
@@ -86,6 +89,7 @@ public class EditEmailActivity extends AppCompatActivity {
 
     @Override
     public boolean onSupportNavigateUp() {
+        // Action bar back button
         onBackPressed();
         executeActivity(EditProfileActivity.class);
         return true;

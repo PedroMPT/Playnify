@@ -50,7 +50,9 @@ import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firestore.v1.Document;
 import com.google.maps.DirectionsApiRequest;
 import com.google.maps.GeoApiContext;
 import com.google.maps.PendingResult;
@@ -109,6 +111,7 @@ public class MainActivity extends AppCompatActivity
     private LatLng mLocation;
     private BottomSheetDialog bottomSheetDialog;
     View bottomSheetDialogView;
+    private User userExists;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -164,7 +167,9 @@ public class MainActivity extends AppCompatActivity
 
     private void loadUserInfo() {
         FirebaseUser user = mAuth.getCurrentUser();
-
+        //We're getting the authenticated user name and profile photo and setting in the activity
+        //For loading the image we use a library call "Glide"
+        //Glide is a fast and efficient open source media management and image loading framework for Android
         if (user != null){
             if (user.getPhotoUrl() != null){
                 Glide.with(this ).load(user.getPhotoUrl().toString()).into(profile_photo);
@@ -175,6 +180,7 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onMapReady(GoogleMap googleMap) {
         if (mLocationPermissionGranted) {
+            //Setting the device location if the permission is granted
             getDevicelocation();
 
             if (ActivityCompat.checkSelfPermission(this,
@@ -183,9 +189,11 @@ public class MainActivity extends AppCompatActivity
                     Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 return;
             }
+            //Getting the map ready with device location
             myMap = googleMap;
             myMap.setMyLocationEnabled(true);
             myMap.getUiSettings().setMyLocationButtonEnabled(false);
+            //Calling the places and markers methods
             addMapMarkers();
             initPlaces();
             setupPlaceAutoComplete();
@@ -196,25 +204,33 @@ public class MainActivity extends AppCompatActivity
 
     private void setupPlaceAutoComplete() {
 
+        //Places API fragment for place search
         placesFragment = (AutocompleteSupportFragment) getSupportFragmentManager().findFragmentById(R.id.places_autocomplete_fragment);
         if (placesFragment != null) {
+            //Set the fragment with list of values: Place ID, Place Name and Place Name
             placesFragment.setPlaceFields(placeFields);
-
-            placesFragment.setCountry("PT");
+            placesFragment.setCountry("PRT");
+            // When the user clicks the place searched we want to send him to the correct location
             placesFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
                 @Override
                 public void onPlaceSelected(@NonNull Place place) {
+                    //Geocoding is the process of transforming a street address
+                    // or other description of a location into a (latitude, longitude) coordinate.
                     Geocoder geocoder = new Geocoder(MainActivity.this);
+                    //address instructs the Places service to return only geocoding results with a precise address.
                     List<Address> addressList = new ArrayList<>();
 
                     try {
-                        addressList = geocoder.getFromLocationName(place.getName(),1);
+                        // We want a address from the place ID
+                        addressList = geocoder.getFromLocationName(place.getAddress(),1);
                     } catch (IOException e) {
                         toastMessage( e.getMessage());
                     }
 
                     if (addressList.size() > 0){
+                        //Creating an address from the address list first position
                         Address address = addressList.get(0);
+                        //Zoom the camera to that specific location
                         moveCamera( new LatLng(address.getLatitude(),address.getLongitude()),DEFAULT_ZOOM,address.getAddressLine(0));
                     }
                 }
@@ -228,6 +244,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void initPlaces() {
+        //Initiating places API
         if (!Places.isInitialized()) {
             Places.initialize(getApplicationContext(), getString(R.string.google_maps_api_key));
         }
@@ -236,6 +253,9 @@ public class MainActivity extends AppCompatActivity
 
     private void getDevicelocation(){
 
+        //After the permission was granted, we want to get the device location
+        //Fused Location is actually a location service which combines GPS location
+        //and network location to achieve balance between battery consumption and accuracy.
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         try{
             if (mLocationPermissionGranted){
@@ -244,13 +264,17 @@ public class MainActivity extends AppCompatActivity
                     @Override
                     public void onComplete(@NonNull Task task) {
                         if (task.isSuccessful()){
+                            //Getting the current device location
                             Location currentLocation = (Location) task.getResult();
                             if (currentLocation != null) {
+                                //Creating a new Latitude e Longitude object with the current location
                                 mLocation = new LatLng(currentLocation.getLatitude(),
                                         currentLocation.getLongitude());
+                                //Move the camera to that specific point on the map
                                 moveCamera(new LatLng(currentLocation.getLatitude(),
                                         currentLocation.getLongitude()),
                                         DEFAULT_ZOOM,"My Location");
+                                //Call game markers
                                 addMapMarkers();
                             }
                         }else{
@@ -266,6 +290,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void moveCamera(LatLng latLng, float zoom, String title){
+        //Simple method to zoom the camera to a specific point on the map
         myMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng,zoom));
         if (!title.equals("My Location")){
             MarkerOptions markerOptions = new MarkerOptions().position(latLng).title(title);
@@ -276,6 +301,7 @@ public class MainActivity extends AppCompatActivity
 
     private void initMap(){
 
+        //Initialize the Google Maps fragment
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         if (mapFragment != null) {
             mapFragment.getMapAsync(MainActivity.this);
@@ -289,11 +315,14 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void addPolylinesToMap(final DirectionsResult result){
+        //This method is to show the polylines of a specific direction
         new Handler(Looper.getMainLooper()).post(new Runnable() {
             @Override
             public void run() {
+                //Initially we've created a list (mPolylinesData) with all the polylines of a designated direction
 
                 if (mPolylinesData.size() > 0){
+                    //Everytime a new result is calculated we want to clear our list and create a new list of polylines
                     for (PolylineData polylineData : mPolylinesData){
                         polylineData.getPolyline().remove();
                     }
@@ -302,7 +331,10 @@ public class MainActivity extends AppCompatActivity
                 }
                 double duration = 9999999;
 
+                //We want to draw a route between two points, so we want to iterate all possible
+                // routes to that calculated result
                 for(DirectionsRoute route: result.routes){
+                    //Get the encoded path of the polylines
                     List<com.google.maps.model.LatLng> decodedPath = PolylineEncoding
                             .decode(route.overviewPolyline
                                     .getEncodedPath());
@@ -317,11 +349,13 @@ public class MainActivity extends AppCompatActivity
                         ));
                     }
 
+                    //Add the polylines to the map
                     Polyline polyline = myMap.addPolyline(new PolylineOptions().addAll(newDecodedPath));
-                    polyline.setColor(ContextCompat.getColor(getApplicationContext(), R.color.aluminum));
+                    polyline.setColor(ContextCompat.getColor(getApplicationContext(), R.color.iron));
                     polyline.setClickable(true);
                     mPolylinesData.add(new PolylineData(polyline,route.legs[0]));
 
+                    //Highlight the polyline with the fastest duration
                     double tempduration = route.legs[0].duration.inSeconds;
 
                     if (tempduration < duration){
@@ -336,11 +370,15 @@ public class MainActivity extends AppCompatActivity
 
     private void calculateDirections(Marker marker){
 
+        //Calculate the directions to a specific marker
+        //Create a map position(Latitude, Longitude) to the destination marker
+
         com.google.maps.model.LatLng destination = new com.google.maps.model.LatLng(
                 marker.getPosition().latitude,
                 marker.getPosition().longitude
         );
 
+        //Call a new directions request to the devices location
         DirectionsApiRequest directions = new DirectionsApiRequest(mGeoAPIContext);
         directions.alternatives(true);
         directions.origin(
@@ -349,11 +387,13 @@ public class MainActivity extends AppCompatActivity
                 )
         );
 
+        //Draw the polylines to that destination
         directions.destination(destination).setCallback(new PendingResult.Callback<DirectionsResult>() {
             @Override
             public void onResult(DirectionsResult result) {
                 Log.d("ActivityTeste", "OnResult: routes: " + result.routes[0].toString());
                 Log.d("ActivityTeste", "OnResult: geocodeWayPoints: " + result.geocodedWaypoints[0].toString());
+                //Call the polyline method with the calculated result
                 addPolylinesToMap(result);
             }
 
@@ -366,10 +406,17 @@ public class MainActivity extends AppCompatActivity
 
     private void getLocationPermission(){
 
+        //Ask user permission for Coarse and Fine Location
+        //The Fine location provides better and accurate locations.
+        //The Coarse location provides less accurate locations.
+        //The network provider determines the location of the users using cell towers,wifi access points etc.
+        //distance between towers and user’s position are considered in the case of cell towers.
+        //The GPS provider determines the location of the users using satellites. For this, the GPS coordinates
+        // are obtained and used for positioning. The GPS receiver in the smartphone receives the signals from satellites.
+
         String[] permissions = {Manifest.permission.ACCESS_FINE_LOCATION,
                 Manifest.permission.ACCESS_COARSE_LOCATION};
 
-        //Check if this if statement is ok
         if (ContextCompat.checkSelfPermission(this.getApplicationContext(),
                 FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED
@@ -390,6 +437,7 @@ public class MainActivity extends AppCompatActivity
 
     private void getGamesLocation(){
 
+        //Save all the FirebaseFirestore game collections into a list
         CollectionReference gameLocationRef = mDB
                 .collection(getString(R.string.collection_games));
         gameLocationRef.get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
@@ -407,12 +455,25 @@ public class MainActivity extends AppCompatActivity
 
     private void addMapMarkers(){
 
+        //This is the method to add the game markers to the map
+        //First we've created two classes: Cluster Marker with all
+        // the details about that marker (Position (LatLng), Title, Snippet and icon picture)
+        //Then a Cluster Renderer to render all the details in the map marker
+
+        //To use the marker clustering utility, you will need to add markers as ClusterItem objects to the ClusterManager.
+        // The ClusterManager passes the markers to the Algorithm, which transforms them into a set of clusters.
+        // The ClusterRenderer takes care of the rendering, by adding and removing clusters and individual markers.
+        // The ClusterRenderer and Algorithm are pluggable and can be customized.
+
         if(myMap != null){
+            //call reset map
             resetMap();
             if (mClusterManager == null){
+                //Create a new manager algorithm  to transform the data into a set of clusters
                 mClusterManager = new ClusterManager<ClusterMarker>(getApplicationContext(),myMap);
             }
             if (mClusterManagerRenderer == null){
+                //Create a new Renderer to render the details
                 mClusterManagerRenderer = new MyClusterManagerRenderer(
                         this,
                         myMap,
@@ -420,11 +481,14 @@ public class MainActivity extends AppCompatActivity
                 );
                 mClusterManager.setRenderer(mClusterManagerRenderer);
             }
+            //We want to add all the available game into the map, so we need to iterate the game list
             for (Game game : games){
                 try{
                     String snippet = "";
                     int avatar = R.drawable.football_mini;
 
+                    //We have a type of game variable in our game collection
+                    //That variable comes handy to check which image and game name we need to render
                     switch (game.getTypeOfGame()) {
                         case 0:
                             avatar = R.drawable.football_icon;
@@ -453,6 +517,7 @@ public class MainActivity extends AppCompatActivity
                         default:
                             break;
                     }
+                    //Now we add those details to our Cluster Marker
                     ClusterMarker myNewClusterMarker = new ClusterMarker(
                             new LatLng(game.getGeoPoint().getLatitude(),game.getGeoPoint().getLongitude()),
                             game.getCaptain().getUsername(),
@@ -460,13 +525,16 @@ public class MainActivity extends AppCompatActivity
                             avatar
                     );
 
+                    //and order the manager to transform that into a marker
                     mClusterManager.addItem(myNewClusterMarker);
+                    //populate the markers list
                     mClusterMarkers.add(myNewClusterMarker);
 
                 }catch (NullPointerException e){
                     toastMessage("Something did go wrong!");
                 }
             }
+            //Finally we cluster our marker
             mClusterManager.cluster();
         }
     }
@@ -508,13 +576,16 @@ public class MainActivity extends AppCompatActivity
 
         if (myMap == null || lstLatLngRoute == null || lstLatLngRoute.isEmpty()) return;
 
+        //This is a builder that is able to create a minimum bound based on a set of LatLng points.
         LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
+        //Iterate the list of routes
         for (LatLng latLngPoint : lstLatLngRoute)
             boundsBuilder.include(latLngPoint);
 
         int routePadding = 120;
         LatLngBounds latLngBounds = boundsBuilder.build();
 
+        //Zoom map to the route
         myMap.animateCamera(
                 CameraUpdateFactory.newLatLngBounds(latLngBounds, routePadding),
                 600,
@@ -528,11 +599,10 @@ public class MainActivity extends AppCompatActivity
         switch (requestCode) {
             case PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION: {
                 // If request is cancelled, the result arrays are empty.
-                //Loop through all possible results??
                 if (grantResults.length > 0
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     mLocationPermissionGranted = true;
-
+                    //If location is granted initialize the map and set the game markers
                     initMap();
                     addMapMarkers();
                 }
@@ -560,24 +630,83 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onInfoWindowClick(final Marker marker) {
+        //When the user clicks the info window marker we want to call our bottom sheet fragment with the game detaisl
+
+        //We create a new LatLng with the game destination
         com.google.maps.model.LatLng destination = new com.google.maps.model.LatLng(
                 marker.getPosition().latitude,
                 marker.getPosition().longitude
         );
+
+        //Iterate the game list
         for (Game game : games){
+            //Retrieve the list LatLng which is equal to the Firebase Game GeoPoint
             if (game.getGeoPoint().getLatitude() == destination.lat
                     && game.getGeoPoint().getLongitude() == destination.lng){
 
+                //Variable to see how many players are left to fill the game
                 int playersLeftToGame = game.getCapacity() - game.getNumberOfPlayers();
 
+                //Set the correct game information to the bottom sheet
                 username.setText("Game Captain: " +  game.getCaptain().getUsername());
                 capacity.setText(String.valueOf(game.getCapacity()) );
                 playersLeft.setText(String.valueOf(playersLeftToGame));
                 date.setText(game.getGameDate());
                 time.setText(game.getHour());
                 Glide.with(this ).load(game.getCaptain().getAvatar()).into(profile);
+
+                //If the user clicks to join the game
+                btn_reserve_spot.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+
+                        //We're getting the firestore reference to the authenticated user to later add him into the game
+                        DocumentReference userRef = mDB.collection(getString(R.string.collection_users)).document(Objects.requireNonNull(mAuth.getUid()));
+                        userRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+                            @Override
+                            public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                                if (task.isSuccessful()){
+                                    //Get the firestore user results to the User Class
+                                    User user = Objects.requireNonNull(task.getResult()).toObject(User.class);
+                                    //Check if there is room for more players and prevent the captain to enter the game he created
+                                    if (game.getNumberOfPlayers() < game.getCapacity()){
+                                        if (!game.getCaptain().getUser_id().equals(mAuth.getCurrentUser().getUid())
+                                                && seeIfPlayerIsInGame(user)){
+                                            //Add the new player to that game list
+                                            game.addPlayers(user);
+
+                                            //Update the firestore game reference to that game
+                                            //By increasing the number of players and players list
+                                            DocumentReference gameRef = mDB.
+                                                    collection(getString(R.string.collection_games)).document(game.getGameID());
+                                            gameRef.update("numberOfPlayers",game.getNumberOfPlayers(),
+                                                    "players",
+                                                    game.getPlayers()).addOnCompleteListener(new OnCompleteListener<Void>() {
+                                                @Override
+                                                public void onComplete(@NonNull Task<Void> task) {
+                                                    if (task.isSuccessful()){
+                                                        toastMessage("Welcome to the game :)");
+                                                    }
+                                                }
+                                            });
+                                        }else{
+                                            toastMessage("You want to play two positions at the same time? :P");
+                                        }
+
+                                    }
+                                    else {
+                                        toastMessage("The game is full ");
+                                    }
+                                }
+                            }
+                        });
+
+                    }
+                });
             }
 
+            //We have a variable to check the selected marker (mSelectedMarker)
+            //If the user clicks the directions button, we want to calculate the directions to that selection
             btn_directions.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -588,65 +717,51 @@ public class MainActivity extends AppCompatActivity
                 }
             });
 
-            btn_reserve_spot.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-
-                    DocumentReference userRef = mDB.collection(getString(R.string.collection_users)).document(Objects.requireNonNull(mAuth.getUid()));
-                    userRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
-                        @Override
-                        public void onComplete(@NonNull Task<DocumentSnapshot> task) {
-                            if (task.isSuccessful()){
-                                User user = Objects.requireNonNull(task.getResult()).toObject(User.class);
-                                if (game.getNumberOfPlayers() < game.getCapacity()
-                                        && !game.getCaptain().getUser_id().equals(mAuth.getCurrentUser().getUid())){
-                                    game.addPlayers(user);
-
-                                    DocumentReference gameRef = mDB.
-                                            collection(getString(R.string.collection_games)).document(game.getGameID());
-                                    gameRef.update("numberOfPlayers",game.getNumberOfPlayers(),
-                                            "players",
-                                            game.getPlayers()).addOnCompleteListener(new OnCompleteListener<Void>() {
-                                        @Override
-                                        public void onComplete(@NonNull Task<Void> task) {
-                                            if (task.isSuccessful()){
-                                                toastMessage("Welcome to the game :)");
-                                            }
-                                            else{
-                                                toastMessage("Sorry, game is full :(");
-                                            }
-                                        }
-                                    });
-                                }
-                                else {
-                                    toastMessage("Is the game full or you want to play in two positions at the same time? :P ");
-                                }
-                            }
-                        }
-                    });
-
-                }
-            });
         }
+        //Show the bottom sheet
         bottomSheetDialog.show();
 
     }
 
+    private boolean seeIfPlayerIsInGame(User user){
+        //Method to check if a certain user already accepted a game
+        //Prevent duplication
+        CollectionReference gameLocationRef = mDB
+                .collection(getString(R.string.collection_games));
+        Query query = gameLocationRef.whereEqualTo("players",user);
+        query.get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+            @Override
+            public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                if (task.isSuccessful()){
+                    userExists = user;
+                }
+            }
+        });
+
+        return userExists == null;
+    }
+
     @Override
     public void onPolylineClick(Polyline polyline) {
+        //Method to highlight the selected polyline and the duration
         int index = 0;
         for(PolylineData polylineData: mPolylinesData){
+            //Iterate our polyline list
             index++;
             if(polyline.getId().equals(polylineData.getPolyline().getId())){
+                //Retrieve the correct polyline (the one selected)
                 polylineData.getPolyline().setColor(ContextCompat.getColor(this, R.color.primary_dark));
                 polylineData.getPolyline().setZIndex(1);
 
+                //Create a variable to store the end location of that direction Latlng
                 LatLng endLocation  = new LatLng(polylineData.getLeg().endLocation.lat
                         ,polylineData.getLeg().endLocation.lng);
+                //Add a marker with duration info
                 Marker marker = myMap.addMarker( new MarkerOptions().position(endLocation)
                 .title("Trip: 0" + index).snippet("Duration: " + polylineData.getLeg().duration));
 
                 marker.showInfoWindow();
+                //Add marker to our trip markers list
                 mTripMarkers.add(marker);
             }
             else{
